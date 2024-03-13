@@ -1,0 +1,7 @@
+argparse
+bs4
+filetype
+prompt-toolkit
+pypdf
+python-dotenv
+requests
