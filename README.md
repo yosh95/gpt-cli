@@ -43,7 +43,7 @@ The script provides a CLI (Command Line Interface) for usability. Here's how you
 ### Basic Usage
 
 ```bash
-./gpt_utility.py [source]
+./gpt.py [source]
 ```
 
 Where `source` can be a URL, a file path, or a direct prompt text.
@@ -63,7 +63,7 @@ Where `source` can be a URL, a file path, or a direct prompt text.
 ### Running the Script
 
 ```bash
-./gpt_utility.py "https://example.com/path/to/content" -m 4
+./gpt.py "https://example.com/path/to/content" -m 4
 ```
 
 This command fetches content from the specified URL using the gpt-4-turbo-preview model for processing.
@@ -73,7 +73,7 @@ This command fetches content from the specified URL using the gpt-4-turbo-previe
 If no source is specified, the script enters an interactive conversation mode:
 
 ```bash
-./gpt_utility.py -m 3
+./gpt.py -m 3
 ```
 
 You'll converse directly with the specified GPT model.
