@@ -11,14 +11,14 @@
           (with-temp-file temp-file
             (insert region-text))
           (let* ((arg (read-string "Additional prompt: "))
-                 (command (format "python3 ~/gpt/gpt.py -m 4 -b -q -c 10000 -p '%s' %s" arg temp-file))
+                 (command (format "python3 ~/gpt-cli/gpt.py -m 4 -b -q -c 10000 -p '%s' %s" arg temp-file))
                  (command-output (shell-command-to-string command)))
             (with-current-buffer output-buffer
               (goto-char (point-max))
               (insert "----\n(User) " arg "\n(GPT) " command-output))
             (delete-file temp-file)))
       (let* ((arg (read-string "Prompt: "))
-             (command (format "python3 ~/gpt/gpt.py -m 4 '%s'" arg))
+             (command (format "python3 ~/gpt-cli/gpt.py -m 4 '%s'" arg))
              (command-output (shell-command-to-string command)))
         (with-current-buffer output-buffer
           (goto-char (point-max))
