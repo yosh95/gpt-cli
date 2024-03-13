@@ -218,7 +218,8 @@ def process_talk(args):
                 response = _send(user_input, conversation=conversation, model=args.model)
                 print(f"({args.model}): {response}")
                 print("----")
-                logging.info(f"(you) {user_input}\n(assistant) {response}")
+                logging.info(f"(You) {user_input}")
+                logging.info(f"({args.model}) {response}")
             except UnicodeDecodeError as e:
                 logging.error(e)
                 print(e)
