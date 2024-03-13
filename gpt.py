@@ -127,6 +127,7 @@ def fetch_url_content(url):
         ext = "txt"
     elif 'text' in content_type:
         attr = "w"
+        content = content.decode('utf-8')
         ext = "txt"
     else:
         attr = "wb"
