@@ -69,7 +69,8 @@ def _send(message, conversation, model):
         response = openai_client.chat.completions.create(
             model=model,
             messages=messages,
-            stream=True
+            stream=True,
+            request_timeout=20
         )
 
         for chunk in response:
@@ -236,6 +237,9 @@ def process_chunks(text, args):
 
     read_count = args.start_pos - 1
     text_length = len(text)
+    if text_length == 0:
+        print("ERROR: Text is empty.")
+        return
 
     history = InMemoryHistory()
     conversation = FixedSizeArray(args.depth)
@@ -250,10 +254,10 @@ def process_chunks(text, args):
                 conversation.append({"role": "assistant", "content": text})
                 print()
 
-            read_count += args.chunk_size
-            if read_count >= text_length:
-                read_count = text_length
-                break
+        read_count += args.chunk_size
+        if read_count >= text_length:
+            read_count = text_length
+            break
 
         consumed = read_count / text_length * 100
         if args.batch == False:
@@ -273,6 +277,10 @@ def process_chunks(text, args):
                 print("Bye.")
         elif args.quiet == False:
             print(f"----({read_count}/{text_length})({consumed:.2f}%)")
+
+        if read_count >= text_length:
+            read_count = text_length
+            break
 
 def process_pdf(file_name, args):
     pages_array = expand_page_range(args.pages)
