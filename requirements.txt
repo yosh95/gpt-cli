@@ -1,6 +1,7 @@
 argparse
 bs4
 filetype
+openai
 prompt-toolkit
 pypdf
 python-dotenv

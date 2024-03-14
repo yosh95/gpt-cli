@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import concurrent.futures
 import filetype
 import hashlib
 import logging
 import os
-import queue
 import re
 import requests
-import threading
 
 from bs4 import BeautifulSoup
 from collections import deque
 from datetime import datetime
 from dotenv import load_dotenv
+from openai import OpenAI
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
 from pypdf import PdfReader
@@ -27,15 +25,16 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper(),
                     filemode="a",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
+### OpenAI
+openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
+
 ### Constants
 DOWNLOAD_DIR = os.path.join(".", "downloads")
 GPT4, GPT35 = "gpt-4-turbo-preview", "gpt-3.5-turbo"
 SYSTEM_PROMPT = os.getenv("GPT_SYSTEM_PROMPT", None)
-API_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_PROMPT = os.getenv("GPT_DEFAULT_PROMPT", "Please summarize the following sentences in English:")
 DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_TALK_QUEUE_SIZE = 6
-DEFAULT_MAX_WORKERS = 3
 
 ### Classes
 class FixedSizeArray:
@@ -52,46 +51,51 @@ class FixedSizeArray:
 ### Helper Functions
 def _send(message, conversation, model):
     messages = []
+
     if conversation:
         messages.extend(conversation.get_array())
+
     if SYSTEM_PROMPT != None:
         messages.append({"role": "system", "content": SYSTEM_PROMPT})
+
     messages.append({"role": "user", "content": message.strip()})
 
-    payload = {"model": model, "messages": messages}
-
-    headers = {"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-               "Content-Type": "application/json"}
-
     logging.debug(f"messages: {messages}")
-    logging.debug(f"payload: {payload}")
-    logging.debug(f"headers: {headers}")
+
+    all_content = ""
 
     try:
-        response = requests.post(API_URL, json=payload, headers=headers, timeout=120.0)
-        response.raise_for_status()
 
-        logging.debug(f"response: {response}")
+        response = openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True
+        )
 
-        data = response.json().get('choices', [{}])[0].get('message', {})
-        text = data.get('content', "Error: Unexpected response format")
+        for chunk in response:
+            chunk_message = chunk.choices[0].delta.content
+            if chunk_message:
+                print(chunk_message, end="", flush=True)
+                all_content += chunk_message
 
         if conversation is not None:
             conversation.append({"role": "user", "content": message.strip()})
-            conversation.append({"role": "assistant", "content": text})
+            conversation.append({"role": "assistant", "content": all_content})
 
     except Timeout as e:
         logging.error(e)
-        text = "The request timed out"
+        print("The request timed out")
     except ConnectionError as e:
         logging.error(e)
-        text = "Network problem (e.g., DNS failure, refused connection, etc)"
+        print("Network problem (e.g., DNS failure, refused connection, etc)")
     except RequestException as e:  # This catches all other exceptions
         logging.error(e)
-        text = f"An error occurred: {e}"
+        print(f"An error occurred: {e}")
 
-    return text
+    logging.debug(f"(You): {message}")
+    logging.debug(f"({model}): {all_content}")
 
+    return all_content
 
 def fetch_url_content(url):
     try:
@@ -184,7 +188,7 @@ def expand_page_range(page_range_str):
             page_nums.append(int(part))
     return page_nums
 
-### Main Functions
+### Processing Functions
 def read_and_process(args):
     if args.source.startswith("http"):
         file_name = fetch_url_content(args.source)
@@ -202,11 +206,11 @@ def read_and_process(args):
     else:
         process_talk(args)
 
-### Mode Specific Processors
 def process_talk(args):
 
     if args.source is not None:
-        print(_send(args.source, conversation=None, model=args.model))
+        _send(args.source, conversation=None, model=args.model)
+        print()
     else:
         history = InMemoryHistory()
         conversation = FixedSizeArray(args.depth)
@@ -216,11 +220,9 @@ def process_talk(args):
                 if user_input.strip() == '':
                     break
                 print("----")
-                response = _send(user_input, conversation=conversation, model=args.model)
-                print(f"({args.model}): {response}")
-                print("----")
-                logging.info(f"(You) {user_input}")
-                logging.info(f"({args.model}) {response}")
+                print(f"({args.model}): ", end="")
+                _send(user_input, conversation=conversation, model=args.model)
+                print("\n----")
             except UnicodeDecodeError as e:
                 logging.error(e)
                 print(e)
@@ -230,105 +232,47 @@ def process_talk(args):
 
         print("Bye.")
 
-stop_event = threading.Event()
+def process_chunks(text, args):
 
-def run_parallel_requests(q, max_workers, messages, conversation, model):
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
-                    executor.submit(
-                        _send, message=message, conversation=conversation, model=model
-                    ) for message in messages
-                ]
-                for future in futures:
-                    response = future.result()
-                    q.put(response)
-
-def thread_chunk_producer(q, text, args):
-    chunks = []
-    for i in range(args.start_pos - 1, len(text), args.chunk_size):
-        chunks.append(text[i:i+args.chunk_size])
-        if len(chunks) == args.max_workers:
-            messages = []
-            for chunk in chunks:
-                messages.append(f"{args.prompt}\n\n{chunk}")
-            if len(chunks) > 0:
-                run_parallel_requests(q, args.max_workers, messages, None, args.model)
-                chunks = []
-
-        if stop_event.is_set():
-            break;
-
-    if stop_event.is_set() == False and len(chunks) > 0:
-        messages = []
-        for chunk in chunks:
-            messages.append(f"{args.prompt}\n\n{chunk}")
-        if len(chunks) > 0:
-            run_parallel_requests(q, args.max_workers, messages, None, args.model)
-
-    q.put(None)
-
-def thread_chunk_consumer(q, length, args):
     read_count = args.start_pos - 1
-    stopped = False
-
-    text = q.get()
-    if text is None:
-        return
+    text_length = len(text)
 
     history = InMemoryHistory()
     conversation = FixedSizeArray(args.depth)
 
     while True:
-        print(text)
-        conversation.append({"role": "assistant", "content": text})
-        logging.info(f"(assistant) {text}")
+        chunks = []
+        for i in range(args.start_pos - 1, text_length, args.chunk_size):
+            chunk = text[i:i+args.chunk_size]
+            if len(chunk) > 0:
+                message = f"{args.prompt}\n\n{chunk}"
+                text = _send(message, conversation, args.model)
+                conversation.append({"role": "assistant", "content": text})
+                print()
 
-        read_count += args.chunk_size
-        if read_count >= length:
-            read_count = length
-            stopped = True
-        consumed = read_count / length * 100
-        if stopped == False:
-            if args.batch == False:
-                try:
-                    while True:
-                        user_input = prompt(f"----({read_count}/{length})({consumed:.2f}%): ", history=history)
-                        if user_input.lower() == 'q':
-                            stop_event.set()
-                            print("The stop flag has been set.")
-                            stopped = True
-                            break
-                        elif user_input.strip() != '':
-                            temp_result = _send(user_input, conversation=conversation, model=args.model)
-                            print("== side talk ==")
-                            print(f"(Assistant): {temp_result}")
-                            print("== side talk ==")
-                        else:
-                            break
-                except EOFError:
-                    stop_event.set()
-                    print("\nThe stop flag has been set.")
-                    stopped = True
-            elif args.quiet == False:
-                print(f"----({read_count}/{length})({consumed:.2f}%)")
-        else:
-            if args.batch == False or args.quiet == False:
-                print(f"----({read_count}/{length})({consumed:.2f}%)")
+            read_count += args.chunk_size
+            if read_count >= text_length:
+                read_count = text_length
+                break
 
-        text = q.get()
-        if text is None:
-            break
-
-def process_chunks(text, args):
-    q = queue.Queue()
-
-    producer_thread = threading.Thread(target=thread_chunk_producer, args=(q, text, args))
-    consumer_thread = threading.Thread(target=thread_chunk_consumer, args=(q, len(text), args))
-    producer_thread.start()
-    consumer_thread.start()
-
-    producer_thread.join()
-    consumer_thread.join()
+        consumed = read_count / text_length * 100
+        if args.batch == False:
+            try:
+                while True:
+                    user_input = prompt(f"----({read_count}/{text_length})({consumed:.2f}%): ", history=history)
+                    if user_input.lower() == 'q':
+                        break
+                    elif user_input.strip() != '':
+                        temp_result = _send(user_input, conversation=conversation, model=args.model)
+                        print("== side talk ==")
+                        print(f"(Assistant): {temp_result}")
+                        print("== side talk ==")
+                    else:
+                        break
+            except EOFError:
+                print("Bye.")
+        elif args.quiet == False:
+            print(f"----({read_count}/{text_length})({consumed:.2f}%)")
 
 def process_pdf(file_name, args):
     pages_array = expand_page_range(args.pages)
@@ -368,8 +312,6 @@ if __name__ == "__main__":
     parser.add_argument('--pages', help="Specify PDF pages to read. Use a comma-separated list and ranges. Example: \"1,3,4-7,11\".")
     parser.add_argument('-q', '--quiet',  action='store_true', help="Suppress the status line. Only applies in batch mode.")
     parser.add_argument('-s', '--start_pos', type=int, help="The starting position (in characters) for reading. Default = 1", default=1)
-    parser.add_argument('-w', '--max_workers', type=int, help=f"Maximum number of concurrent workers for sending API requests. Default = 3.",
-                        default=DEFAULT_MAX_WORKERS)
     args = parser.parse_args()
 
     if args.model == '3':
