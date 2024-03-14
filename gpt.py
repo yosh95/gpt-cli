@@ -5,6 +5,7 @@ import filetype
 import hashlib
 import logging
 import os
+import openai
 import re
 import requests
 
@@ -12,7 +13,6 @@ from bs4 import BeautifulSoup
 from collections import deque
 from datetime import datetime
 from dotenv import load_dotenv
-from openai import OpenAI
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
 from pypdf import PdfReader
@@ -26,7 +26,7 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper(),
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 ### OpenAI
-openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
+openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
 
 ### Constants
 DOWNLOAD_DIR = os.path.join(".", "downloads")
