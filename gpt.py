@@ -70,7 +70,7 @@ def _send(message, conversation, model):
             model=model,
             messages=messages,
             stream=True,
-            request_timeout=20
+            timeout=10
         )
 
         for chunk in response:
@@ -244,20 +244,17 @@ def process_chunks(text, args):
     history = InMemoryHistory()
     conversation = FixedSizeArray(args.depth)
 
-    while True:
-        chunks = []
-        for i in range(args.start_pos - 1, text_length, args.chunk_size):
-            chunk = text[i:i+args.chunk_size]
-            if len(chunk) > 0:
-                message = f"{args.prompt}\n\n{chunk}"
-                text = _send(message, conversation, args.model)
-                conversation.append({"role": "assistant", "content": text})
-                print()
+    for i in range(args.start_pos - 1, text_length, args.chunk_size):
+        chunk = text[i:i+args.chunk_size]
+        if len(chunk) > 0:
+            message = f"{args.prompt}\n\n{chunk}"
+            content = _send(message, None, args.model)
+            conversation.append({"role": "assistant", "content": content})
+            print()
 
         read_count += args.chunk_size
         if read_count >= text_length:
             read_count = text_length
-            break
 
         consumed = read_count / text_length * 100
         if args.batch == False:
@@ -265,7 +262,7 @@ def process_chunks(text, args):
                 while True:
                     user_input = prompt(f"----({read_count}/{text_length})({consumed:.2f}%): ", history=history)
                     if user_input.lower() == 'q':
-                        break
+                        return
                     elif user_input.strip() != '':
                         temp_result = _send(user_input, conversation=conversation, model=args.model)
                         print("== side talk ==")
@@ -277,10 +274,6 @@ def process_chunks(text, args):
                 print("Bye.")
         elif args.quiet == False:
             print(f"----({read_count}/{text_length})({consumed:.2f}%)")
-
-        if read_count >= text_length:
-            read_count = text_length
-            break
 
 def process_pdf(file_name, args):
     pages_array = expand_page_range(args.pages)
