@@ -270,6 +270,7 @@ def process_chunks(text, args):
                         break
             except EOFError:
                 print("Bye.")
+                break
         elif args.quiet == False:
             print(f"----({read_count}/{text_length})({consumed:.2f}%)")
 
