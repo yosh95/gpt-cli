@@ -14,7 +14,7 @@ from collections import deque
 from datetime import datetime
 from dotenv import load_dotenv
 from prompt_toolkit import prompt
-from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.history import FileHistory
 from pypdf import PdfReader
 from requests.exceptions import Timeout, ConnectionError, RequestException
 
@@ -35,6 +35,7 @@ SYSTEM_PROMPT = os.getenv("GPT_SYSTEM_PROMPT", None)
 DEFAULT_PROMPT = os.getenv("GPT_DEFAULT_PROMPT", "Please summarize the following sentences in English:")
 DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_TALK_QUEUE_SIZE = 6
+INPUT_HISTORY = os.path.expanduser("~") + "/.gpt_prompt_history"
 
 ### Classes
 class FixedSizeArray:
@@ -213,7 +214,7 @@ def process_talk(args):
         _send(args.source, conversation=None, model=args.model)
         print()
     else:
-        history = InMemoryHistory()
+        history = FileHistory(INPUT_HISTORY)
         conversation = FixedSizeArray(args.depth)
         while True:
             try:
@@ -241,7 +242,7 @@ def process_chunks(text, args):
         print("ERROR: Text is empty.")
         return
 
-    history = InMemoryHistory()
+    history = FileHistory(INPUT_HISTORY)
     conversation = FixedSizeArray(args.depth)
 
     for i in range(args.start_pos - 1, text_length, args.chunk_size):
