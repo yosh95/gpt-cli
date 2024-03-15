@@ -13,10 +13,10 @@ from bs4 import BeautifulSoup
 from collections import deque
 from datetime import datetime
 from dotenv import load_dotenv
-from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.shortcuts import prompt
 from pypdf import PdfReader
-from requests.exceptions import Timeout, ConnectionError, RequestException
 
 ### Initialize Logging and .env
 load_dotenv()
@@ -27,6 +27,17 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper(),
 
 ### OpenAI
 openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
+
+### prompt_toolkit
+kb = KeyBindings()
+
+@kb.add('escape', 'enter')
+def _(event):
+    event.current_buffer.insert_text('\n')
+
+@kb.add('enter')
+def _(event):
+    event.current_buffer.validate_and_handle()
 
 ### Constants
 DOWNLOAD_DIR = os.path.join(".", "downloads")
@@ -84,15 +95,9 @@ def _send(message, conversation, model):
             conversation.append({"role": "user", "content": message.strip()})
             conversation.append({"role": "assistant", "content": all_content})
 
-    except Timeout as e:
+    except Exception as e:
         logging.error(e)
-        print("The request timed out")
-    except ConnectionError as e:
-        logging.error(e)
-        print("Network problem (e.g., DNS failure, refused connection, etc)")
-    except RequestException as e:  # This catches all other exceptions
-        logging.error(e)
-        print(f"An error occurred: {e}")
+        print(e)
 
     logging.debug(f"(You): {message}")
     logging.debug(f"({model}): {all_content}")
@@ -102,17 +107,9 @@ def _send(message, conversation, model):
 def fetch_url_content(url):
     try:
         response = requests.get(url, timeout=60.0)
-    except Timeout as e:
+    except Exception as e:
         logging.error(e)
-        print("The request timed out")
-        return
-    except ConnectionError as e:
-        logging.error(e)
-        print("Network problem (e.g., DNS failure, refused connection, etc)")
-        return
-    except RequestException as e:  # This catches all other exceptions
-        logging.error(e)
-        print(f"An error occurred: {e}")
+        print(e)
         return
 
     response.raise_for_status()
@@ -218,7 +215,7 @@ def process_talk(args):
         conversation = FixedSizeArray(args.depth)
         while True:
             try:
-                user_input = prompt("(You): ", history=history)
+                user_input = prompt("(You): ", history=history, key_bindings=kb, multiline=True)
                 if user_input.strip() == '':
                     break
                 print("----")
@@ -261,14 +258,14 @@ def process_chunks(text, args):
         if args.batch == False:
             try:
                 while True:
-                    user_input = prompt(f"----({read_count}/{text_length})({consumed:.2f}%): ", history=history)
+                    user_input = prompt(f"----({read_count}/{text_length})({consumed:.2f}%): ",
+                                        history=history, key_bindings=kb, multiline=True)
                     if user_input.lower() == 'q':
                         return
                     elif user_input.strip() != '':
-                        temp_result = _send(user_input, conversation=conversation, model=args.model)
                         print("== side talk ==")
-                        print(f"(Assistant): {temp_result}")
-                        print("== side talk ==")
+                        _send(user_input, conversation=conversation, model=args.model)
+                        print("\n== side talk ==")
                     else:
                         break
             except EOFError:
