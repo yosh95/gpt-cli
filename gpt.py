@@ -263,9 +263,9 @@ def process_chunks(text, args):
                     if user_input.lower() == 'q':
                         return
                     elif user_input.strip() != '':
-                        print("== side talk ==")
+                        print("== Side conversation ==")
                         _send(user_input, conversation=conversation, model=args.model)
-                        print("\n== side talk ==")
+                        print("\n== Side conversation ==")
                     else:
                         break
             except EOFError:
