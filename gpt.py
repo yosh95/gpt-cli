@@ -281,12 +281,15 @@ def check_chunks(text, args):
                 user_input = prompt(f"----(--/{len(text)})(0.00%)(chunk_size={args.chunk_size}): ")
                 if user_input.lower() == 'q':
                     return
-                try:
-                    num = int(user_input)
-                    args.chunk_size = num
+                elif user_input != '':
+                    try:
+                        num = int(user_input)
+                        args.chunk_size = num
+                        break
+                    except ValueError:
+                        print(f"Invalid number:{user_input}")
+                else:
                     break
-                except ValueError:
-                    print(f"Invalid number:{user_input}")
         except EOFError:
             return
 
