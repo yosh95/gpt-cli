@@ -82,7 +82,7 @@ def _send(message, conversation, model):
             model=model,
             messages=messages,
             stream=True,
-            timeout=10
+            timeout=30
         )
 
         for chunk in response:
