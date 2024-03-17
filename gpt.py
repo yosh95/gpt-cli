@@ -62,7 +62,7 @@ class FixedSizeArray:
         return list(self.array)
 
 ### Helper Functions
-def _send(message, conversation, model, break_lf):
+def _send(message, conversation, args):
     messages = []
 
     if conversation:
@@ -80,23 +80,23 @@ def _send(message, conversation, model, break_lf):
     try:
 
         response = openai_client.chat.completions.create(
-            model=model,
+            model=args.model,
             messages=messages,
             stream=True,
             timeout=30
         )
 
         lf_count = 0
-        prev_lf_count = 0
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
-                print(chunk_message, end="", flush=True)
+                for c in chunk_message:
+                    print(c, end="", flush=True)
+                    if args.batch == False and c == '\n':
+                        lf_count += 1
+                        if lf_count % args.break_lf == 0:
+                            input()
                 all_content += chunk_message
-                lf_count += chunk_message.count('\n')
-                if break_lf > 0 and (lf_count - prev_lf_count) >= break_lf:
-                    input("--- Press Enter to continue...")
-                    prev_lf_count = lf_count
 
         if conversation is not None:
             conversation.append({"role": "user", "content": message.strip()})
@@ -107,7 +107,7 @@ def _send(message, conversation, model, break_lf):
         print(e)
 
     logging.debug(f"(You): {message}")
-    logging.debug(f"({model}): {all_content}")
+    logging.debug(f"({args.model}): {all_content}")
 
     return all_content
 
@@ -215,7 +215,7 @@ def read_and_process(args):
 def process_talk(args):
 
     if args.source is not None:
-        _send(args.source, conversation=None, model=args.model, break_lf=args.break_lf)
+        _send(args.source, conversation=None, args=args)
         print()
     else:
         history = FileHistory(INPUT_HISTORY)
@@ -227,7 +227,7 @@ def process_talk(args):
                     break
                 print("----")
                 print(f"({args.model}): ", end="")
-                _send(user_input, conversation=conversation, model=args.model, break_lf=args.break_lf)
+                _send(user_input, conversation=conversation, args=args)
                 print("\n----")
             except UnicodeDecodeError as e:
                 logging.error(e)
@@ -253,7 +253,7 @@ def process_chunks(text, args):
         chunk = text[i:i+args.chunk_size]
         if len(chunk) > 0:
             message = f"{args.prompt}\n\n{chunk}"
-            content = _send(message, None, args.model, args.break_lf)
+            content = _send(message, None, args)
             conversation.append({"role": "assistant", "content": content})
             print()
 
@@ -271,7 +271,7 @@ def process_chunks(text, args):
                         return
                     elif user_input.strip() != '':
                         print("== Side conversation ==")
-                        _send(user_input, conversation=conversation, model=args.model, break_lf=args.break_lf)
+                        _send(user_input, conversation=conversation, args=args)
                         print("\n== Side conversation ==")
                     else:
                         break
