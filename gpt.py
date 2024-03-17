@@ -90,13 +90,14 @@ def _send(message, conversation, args):
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
+                all_content += chunk_message
                 for c in chunk_message:
-                    print(c, end="", flush=True)
                     if args.batch == False and c == '\n':
                         lf_count += 1
                         if lf_count % args.break_lf == 0:
                             input()
-                all_content += chunk_message
+                            continue
+                    print(c, end="", flush=True)
 
         if conversation is not None:
             conversation.append({"role": "user", "content": message.strip()})
