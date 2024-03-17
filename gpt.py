@@ -274,6 +274,24 @@ def process_chunks(text, args):
         elif args.quiet == False:
             print(f"----({read_count}/{text_length})({consumed:.2f}%)")
 
+def check_chunks(text, args):
+    if args.batch == False or args.quiet == False:
+        try:
+            while True:
+                user_input = prompt(f"----(--/{len(text)})(0.00%)(chunk_size={args.chunk_size}): ")
+                if user_input.lower() == 'q':
+                    return
+                try:
+                    num = int(user_input)
+                    args.chunk_size = num
+                    break
+                except ValueError:
+                    print(f"Invalid number:{user_input}")
+        except EOFError:
+            return
+
+        process_chunks(text, args)
+
 def process_pdf(file_name, args):
     pages_array = expand_page_range(args.pages)
     reader = PdfReader(file_name)
@@ -282,20 +300,16 @@ def process_pdf(file_name, args):
         if (args.pages == None) or (i in pages_array):
             text += ' ' + page.extract_text()
 
-    if args.batch == False or args.quiet == False:
-        print(f"----(--/{len(text)})(0.00%)")
-
     if text != '':
-        process_chunks(text, args)
+        check_chunks(text, args)
     else:
         print("No matched pages.")
 
 def process_text(file_name, args):
     with open(file_name, 'r', encoding='utf-8') as file:
         text = file.read()
-        if args.batch == False or args.quiet == False:
-            print(f"----(--/{len(text)})(0.00%)")
-        process_chunks(text, args)
+        if text != '':
+            check_chunks(text, args)
 
 ### CLI Interface
 if __name__ == "__main__":
