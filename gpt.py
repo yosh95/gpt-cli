@@ -18,37 +18,45 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import prompt
 from pypdf import PdfReader
 
-### Initialize Logging and .env
+# Initialize Logging and .env
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper(),
                     filename="gpt.log",
                     filemode="a",
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
-### OpenAI
-openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
+# OpenAI
+openai_client = openai.OpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY",
+                               "<your OpenAI API key if not set as env var>"))
 
-### prompt_toolkit
+# prompt_toolkit
 kb = KeyBindings()
+
 
 @kb.add('escape', 'enter')
 def _(event):
     event.current_buffer.insert_text('\n')
 
+
 @kb.add('enter')
 def _(event):
     event.current_buffer.validate_and_handle()
 
-### Constants
+
+# Constants
 DOWNLOAD_DIR = os.path.join(".", "downloads")
 GPT4, GPT35 = "gpt-4-turbo-preview", "gpt-3.5-turbo"
 SYSTEM_PROMPT = os.getenv("GPT_SYSTEM_PROMPT", None)
-DEFAULT_PROMPT = os.getenv("GPT_DEFAULT_PROMPT", "Please summarize the following sentences in English:")
+DEFAULT_PROMPT = os.getenv(
+        "GPT_DEFAULT_PROMPT",
+        "Please summarize the following sentences in English:")
 DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_TALK_QUEUE_SIZE = 6
 INPUT_HISTORY = os.path.expanduser("~") + "/.gpt_prompt_history"
 
-### Classes
+
+# Classes
 class FixedSizeArray:
     def __init__(self, size):
         self.size = size
@@ -60,14 +68,15 @@ class FixedSizeArray:
     def get_array(self):
         return list(self.array)
 
-### Helper Functions
+
+# Helper Functions
 def _send(message, conversation, args):
     messages = []
 
     if conversation:
         messages.extend(conversation.get_array())
 
-    if SYSTEM_PROMPT != None:
+    if SYSTEM_PROMPT is not None:
         messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     messages.append({"role": "user", "content": message.strip()})
@@ -103,6 +112,7 @@ def _send(message, conversation, args):
     logging.debug(f"({args.model}): {all_content}")
 
     return all_content
+
 
 def fetch_url_content(url):
     try:
@@ -143,7 +153,9 @@ def fetch_url_content(url):
     md5 = hashlib.md5()
     md5.update(url.encode())
     file_name = md5.hexdigest()
-    file_path = os.path.join(DOWNLOAD_DIR, f"{formatted_date_time}-{file_name}.{ext}")
+    file_path = os.path.join(
+            DOWNLOAD_DIR,
+            f"{formatted_date_time}-{file_name}.{ext}")
     if ext == 'txt':
         with open(file_path, attr, encoding='utf-8') as file:
             file.write(content)
@@ -153,12 +165,14 @@ def fetch_url_content(url):
 
     return file_path
 
+
 def expand_page_range(page_range_str):
     """Parse a string specifying page ranges and return a list of page numbers.
     Raises ValueError if the page_range_str contains invalid characters.
 
     Args:
-        page_range_str (str): A string specifying page ranges, e.g., "1,3,4-9,13,14-20,30"
+        page_range_str (str): A string specifying page ranges,
+                              e.g., "1,3,4-9,13,14-20,30"
 
     Returns:
         list: A list of page numbers.
@@ -166,7 +180,7 @@ def expand_page_range(page_range_str):
 
     page_nums = []
 
-    if page_range_str == None:
+    if page_range_str is None:
         return page_nums
 
     # Check if the page_range_str contains only digits, commas, and hyphens
@@ -187,11 +201,12 @@ def expand_page_range(page_range_str):
             page_nums.append(int(part))
     return page_nums
 
-### Processing Functions
+
+# Processing Functions
 def read_and_process(args):
     if args.source.startswith("http"):
         file_name = fetch_url_content(args.source)
-        if file_name == None:
+        if file_name is None:
             return
     else:
         file_name = args.source
@@ -205,6 +220,7 @@ def read_and_process(args):
     else:
         process_talk(args)
 
+
 def process_talk(args):
 
     if args.source is not None:
@@ -215,7 +231,10 @@ def process_talk(args):
         conversation = FixedSizeArray(args.depth)
         while True:
             try:
-                user_input = prompt("(You): ", history=history, key_bindings=kb, multiline=True)
+                user_input = prompt("(You): ",
+                                    history=history,
+                                    key_bindings=kb,
+                                    multiline=True)
                 if user_input.strip() == '':
                     break
                 print("----")
@@ -230,6 +249,7 @@ def process_talk(args):
                 break
 
         print("Bye.")
+
 
 def process_chunks(text, args):
 
@@ -255,11 +275,15 @@ def process_chunks(text, args):
             read_count = text_length
 
         consumed = read_count / text_length * 100
-        if args.batch == False:
+        if args.batch is False:
             try:
                 while True:
-                    user_input = prompt(f"----({read_count}/{text_length})({consumed:.2f}%): ",
-                                        history=history, key_bindings=kb, multiline=True)
+                    user_input = prompt(
+                            f"----({read_count}/{text_length})"
+                            + "({consumed:.2f}%): ",
+                            history=history,
+                            key_bindings=kb,
+                            multiline=True)
                     if user_input.lower() == 'q':
                         return
                     elif user_input.strip() != '':
@@ -271,14 +295,16 @@ def process_chunks(text, args):
             except EOFError:
                 print("Bye.")
                 break
-        elif args.quiet == False:
+        elif args.quiet is False:
             print(f"----({read_count}/{text_length})({consumed:.2f}%)")
 
+
 def check_chunks(text, args):
-    if args.batch == False or args.quiet == False:
+    if args.batch is False or args.quiet is False:
         try:
             while True:
-                user_input = prompt(f"----(--/{len(text)})(0.00%)(chunk_size={args.chunk_size}): ")
+                user_input = prompt(f"----(--/{len(text)})(0.00%)"
+                                    + "(chunk_size={args.chunk_size}): ")
                 if user_input.lower() == 'q':
                     return
                 elif user_input != '':
@@ -295,12 +321,13 @@ def check_chunks(text, args):
 
         process_chunks(text, args)
 
+
 def process_pdf(file_name, args):
     pages_array = expand_page_range(args.pages)
     reader = PdfReader(file_name)
     text = ''
     for i, page in enumerate(reader.pages, start=1):
-        if (args.pages == None) or (i in pages_array):
+        if (args.pages is None) or (i in pages_array):
             text += ' ' + page.extract_text()
 
     if text != '':
@@ -308,27 +335,71 @@ def process_pdf(file_name, args):
     else:
         print("No matched pages.")
 
+
 def process_text(file_name, args):
     with open(file_name, 'r', encoding='utf-8') as file:
         text = file.read()
         if text != '':
             check_chunks(text, args)
 
-### CLI Interface
+
+# CLI Interface
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-                        description="This GPT utility offers versatile options for generating text with different GPT models. You can provide a source as either a URL, a file path, or directly as a prompt.")
+                        description="This GPT utility offers versatile "
+                                    + "options for generating text with "
+                                    + "different GPT models. You can "
+                                    + "provide a source as either a URL, "
+                                    + "a file path, or directly as a prompt.")
 
-    parser.add_argument('source', nargs='?', help="Specify the source for the prompt. Can be a URL, a file path, or a direct prompt text.")
-    parser.add_argument('-b', '--batch', action='store_true', help="Proceed without waiting for further input. Ideal for scripting.")
-    parser.add_argument('-c', '--chunk_size', type=int, help="Set the text chunk size (in characters) for reading operations.", default=DEFAULT_CHUNK_SIZE)
-    parser.add_argument('-d', '--depth', type=int, help="Define the number of previous interactions to consider in the conversation history.", default=DEFAULT_TALK_QUEUE_SIZE)
-    parser.add_argument('-m', '--model', help="Choose the GPT model for text generation. Options: 3 (for gpt-3.5-turbo), 4 (for gpt-4-turbo-preview), or an explicit OpenAI model name.",
+    parser.add_argument('source',
+                        nargs='?',
+                        help="Specify the source for the prompt. "
+                             + "Can be a URL, a file path, "
+                             + "or a direct prompt text.")
+    parser.add_argument('-b',
+                        '--batch',
+                        action='store_true',
+                        help="Proceed without waiting for "
+                             + "further input. Ideal for scripting.")
+    parser.add_argument('-c',
+                        '--chunk_size',
+                        type=int,
+                        help="Set the text chunk size (in characters) "
+                             + "for reading operations.",
+                        default=DEFAULT_CHUNK_SIZE)
+    parser.add_argument('-d',
+                        '--depth',
+                        type=int,
+                        help="Define the number of previous interactions "
+                             + "to consider in the conversation history.",
+                        default=DEFAULT_TALK_QUEUE_SIZE)
+    parser.add_argument('-m',
+                        '--model',
+                        help="Choose the GPT model for text generation. "
+                             + "Options: 3 (for gpt-3.5-turbo), "
+                             + "4 (for gpt-4-turbo-preview), or "
+                             + "an explicit OpenAI model name.",
                         default="3")
-    parser.add_argument('-p', '--prompt', help="Directly provide the text prompt for generation.")
-    parser.add_argument('--pages', help="Specify PDF pages to read. Use a comma-separated list and ranges. Example: \"1,3,4-7,11\".")
-    parser.add_argument('-q', '--quiet',  action='store_true', help="Suppress the status line. Only applies in batch mode.")
-    parser.add_argument('-s', '--start_pos', type=int, help="The starting position (in characters) for reading. Default = 1", default=1)
+    parser.add_argument('-p',
+                        '--prompt',
+                        help="Directly provide the text prompt for "
+                             + "generation.")
+    parser.add_argument('--pages',
+                        help="Specify PDF pages to read. Use a "
+                             + "comma-separated list and ranges. "
+                             + "Example: \"1,3,4-7,11\".")
+    parser.add_argument('-q',
+                        '--quiet',
+                        action='store_true',
+                        help="Suppress the status line. "
+                             + "Only applies in batch mode.")
+    parser.add_argument('-s',
+                        '--start_pos',
+                        type=int,
+                        help="The starting position (in characters) "
+                             + "for reading. Default = 1",
+                        default=1)
     args = parser.parse_args()
 
     if args.model == '3':
