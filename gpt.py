@@ -241,7 +241,7 @@ def process_talk(args):
 
 def process_chunks(text, args):
 
-    read_count = args.start_pos - 1
+    read_count = args.start_pos
     text_length = len(text)
     if text_length == 0:
         print("ERROR: Text is empty.")
