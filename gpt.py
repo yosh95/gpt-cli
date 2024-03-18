@@ -280,7 +280,7 @@ def process_chunks(text, args):
                 while True:
                     user_input = prompt(
                             f"----({read_count}/{text_length})"
-                            + "({consumed:.2f}%): ",
+                            + f"({consumed:.2f}%): ",
                             history=history,
                             key_bindings=kb,
                             multiline=True)
@@ -304,7 +304,7 @@ def check_chunks(text, args):
         try:
             while True:
                 user_input = prompt(f"----(--/{len(text)})(0.00%)"
-                                    + "(chunk_size={args.chunk_size}): ")
+                                    + f"(chunk_size={args.chunk_size}): ")
                 if user_input.lower() == 'q':
                     return
                 elif user_input != '':
