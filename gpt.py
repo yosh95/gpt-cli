@@ -47,7 +47,6 @@ DEFAULT_PROMPT = os.getenv("GPT_DEFAULT_PROMPT", "Please summarize the following
 DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_TALK_QUEUE_SIZE = 6
 INPUT_HISTORY = os.path.expanduser("~") + "/.gpt_prompt_history"
-DEFAULT_BREAK_LF = os.getenv("GPT_BREAK_LF", 0)
 
 ### Classes
 class FixedSizeArray:
@@ -83,21 +82,14 @@ def _send(message, conversation, args):
             model=args.model,
             messages=messages,
             stream=True,
-            timeout=20
+            timeout=30
         )
 
-        lf_count = 0
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
                 all_content += chunk_message
-                for c in chunk_message:
-                    if args.batch == False and c == '\n':
-                        lf_count += 1
-                        if args.break_lf > 0 and (lf_count % args.break_lf) == 0:
-                            input()
-                            continue
-                    print(c, end="", flush=True)
+                print(chunk_message, end="", flush=True)
 
         if conversation is not None:
             conversation.append({"role": "user", "content": message.strip()})
@@ -114,7 +106,7 @@ def _send(message, conversation, args):
 
 def fetch_url_content(url):
     try:
-        response = requests.get(url, timeout=20.0)
+        response = requests.get(url, timeout=30.0)
     except Exception as e:
         logging.error(e)
         print(e)
@@ -329,7 +321,6 @@ if __name__ == "__main__":
 
     parser.add_argument('source', nargs='?', help="Specify the source for the prompt. Can be a URL, a file path, or a direct prompt text.")
     parser.add_argument('-b', '--batch', action='store_true', help="Proceed without waiting for further input. Ideal for scripting.")
-    parser.add_argument('--break_lf', type=int, help="LF count to break output.", default=DEFAULT_BREAK_LF)
     parser.add_argument('-c', '--chunk_size', type=int, help="Set the text chunk size (in characters) for reading operations.", default=DEFAULT_CHUNK_SIZE)
     parser.add_argument('-d', '--depth', type=int, help="Define the number of previous interactions to consider in the conversation history.", default=DEFAULT_TALK_QUEUE_SIZE)
     parser.add_argument('-m', '--model', help="Choose the GPT model for text generation. Options: 3 (for gpt-3.5-turbo), 4 (for gpt-4-turbo-preview), or an explicit OpenAI model name.",
