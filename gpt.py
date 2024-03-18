@@ -83,7 +83,7 @@ def _send(message, conversation, args):
             model=args.model,
             messages=messages,
             stream=True,
-            timeout=30
+            timeout=20
         )
 
         lf_count = 0
@@ -114,7 +114,7 @@ def _send(message, conversation, args):
 
 def fetch_url_content(url):
     try:
-        response = requests.get(url, timeout=60.0)
+        response = requests.get(url, timeout=20.0)
     except Exception as e:
         logging.error(e)
         print(e)
