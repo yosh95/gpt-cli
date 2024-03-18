@@ -94,7 +94,7 @@ def _send(message, conversation, args):
                 for c in chunk_message:
                     if args.batch == False and c == '\n':
                         lf_count += 1
-                        if lf_count % args.break_lf == 0:
+                        if args.break_lf > 0 and (lf_count % args.break_lf) == 0:
                             input()
                             continue
                     print(c, end="", flush=True)
