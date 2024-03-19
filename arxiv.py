@@ -7,11 +7,12 @@ from bs4 import BeautifulSoup
 def get_arxiv(category):
 
     skip = 0
+    show = 5
 
-    base_url = "https://arxiv.org/list/{category}/new?skip={skip}&show=10"
+    base_url = "https://arxiv.org/list/{category}/new?skip={skip}&show={show}"
 
     while True:
-        response = requests.get(base_url.format(category=category, skip=skip))
+        response = requests.get(base_url.format(category=category, skip=skip, show=show))
 
         if response.status_code == 200:
             html_content = response.text
@@ -48,7 +49,7 @@ def get_arxiv(category):
             if user_input == 'q':
                 break
             elif user_input == '':
-                skip += 10
+                skip += show
                 break
             else:
                 try:
