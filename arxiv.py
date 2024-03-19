@@ -4,6 +4,8 @@ import requests
 
 from bs4 import BeautifulSoup
 
+DEFAULT_CATEGORY = "cs"
+
 def get_arxiv(category):
 
     skip = 0
@@ -82,6 +84,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.category is None:
-        args.category = "cs.AI"
+        args.category = DEFAULT_CATEGORY
 
     get_arxiv(args.category)
