@@ -11,7 +11,7 @@ def get_arxiv(category):
     skip = 0
     show = 5
 
-    base_url = "https://arxiv.org/list/{category}/new?skip={skip}&show={show}"
+    base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
 
     while True:
         response = requests.get(base_url.format(category=category, skip=skip, show=show))
