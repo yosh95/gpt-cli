@@ -237,10 +237,10 @@ def process_talk(args):
                                     multiline=True)
                 if user_input.strip() == '':
                     break
-                print("----")
+                print("---")
                 print(f"({args.model}): ", end="")
                 _send(user_input, conversation=conversation, args=args)
-                print("\n----")
+                print("\n---")
             except UnicodeDecodeError as e:
                 logging.error(e)
                 print(e)
@@ -279,7 +279,7 @@ def process_chunks(text, args):
             try:
                 while True:
                     user_input = prompt(
-                            f"----({read_count}/{text_length})"
+                            f"---({read_count}/{text_length})"
                             + f"({consumed:.2f}%): ",
                             history=history,
                             key_bindings=kb,
@@ -296,14 +296,14 @@ def process_chunks(text, args):
                 print("Bye.")
                 break
         elif args.quiet is False:
-            print(f"----({read_count}/{text_length})({consumed:.2f}%)")
+            print(f"---({read_count}/{text_length})({consumed:.2f}%)")
 
 
 def check_chunks(text, args):
     if args.batch is False or args.quiet is False:
         try:
             while True:
-                user_input = prompt(f"----(--/{len(text)})(0.00%)"
+                user_input = prompt(f"---(--/{len(text)})(0.00%)"
                                     + f"(chunk_size={args.chunk_size}): ")
                 if user_input.lower() == 'q':
                     return
