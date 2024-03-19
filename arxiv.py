@@ -43,7 +43,7 @@ def get_arxiv(category):
             print("---")
             print(f"(category:{category})")
             for i, item in enumerate(arxiv_ids):
-                print(f"{i}) {titles[i]} ({arxiv_ids[i]})")
+                print(f"{i+1}) {titles[i]} ({arxiv_ids[i]})")
             print("---")
             user_input = input("(q to quit)> ")
             print("---")
@@ -60,10 +60,10 @@ def get_arxiv(category):
                     print(f"Invalid input:{user_input}")
                     continue
 
-            if num >= 0 and num <= 9:
-                print(f"{num}) {titles[num]} ({arxiv_ids[num]})")
+            if num >= 1 and num <= show:
+                print(f"{num}) {titles[num-1]} ({arxiv_ids[num-1]})")
                 print("---")
-                command = f"gpt https://arxiv.org/pdf/{arxiv_ids[num]}.pdf"
+                command = f"gpt https://arxiv.org/pdf/{arxiv_ids[num-1]}.pdf"
                 print(command)
                 os.system(command)
             else:
