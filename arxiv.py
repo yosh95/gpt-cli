@@ -5,11 +5,12 @@ import requests
 from bs4 import BeautifulSoup
 
 DEFAULT_CATEGORY = "cs"
+DEFAULT_LIST_SIZE = 5
 
 def get_arxiv(category):
 
     skip = 0
-    show = 5
+    show = DEFAULT_LIST_SIZE
 
     base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
 
