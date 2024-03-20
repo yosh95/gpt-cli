@@ -39,11 +39,16 @@ def get_arxiv(category):
         for div in soup.find_all("div", class_="list-title mathjax"):
             titles.append(div.text.strip().replace("Title: ", ""))
 
+        subjects = []
+
+        for span in soup.find_all("span", class_="primary-subject"):
+            subjects.append(span.text.strip())
+
         while True:
             print("---")
-            print(f"(category:{category})")
+            print(f"category:{category}\n")
             for i, item in enumerate(arxiv_ids):
-                print(f"{i+1}) {titles[i]} ({arxiv_ids[i]})")
+                print(f"({i+1}) {titles[i]} ({arxiv_ids[i]}) ({subjects[i]})")
             print("---")
             user_input = input("(q to quit)> ")
             print("---")
@@ -61,8 +66,6 @@ def get_arxiv(category):
                     continue
 
             if num >= 1 and num <= show:
-                print(f"{num}) {titles[num-1]} ({arxiv_ids[num-1]})")
-                print("---")
                 command = f"gpt https://arxiv.org/pdf/{arxiv_ids[num-1]}.pdf"
                 print(command)
                 os.system(command)
