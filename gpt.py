@@ -97,6 +97,7 @@ def _send(message, conversation, model):
             timeout=30
         )
 
+        print(f"({model})\n")
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
@@ -252,7 +253,6 @@ def process_talk(args):
                     model = GPT35
 
                 print("---")
-                print(f"({model}): ", end="")
                 _send(user_input, conversation=conversation, model=model)
                 print("\n---")
             except UnicodeDecodeError as e:
@@ -261,8 +261,6 @@ def process_talk(args):
             except EOFError:
                 print()
                 break
-
-        print("Bye.")
 
 
 def process_chunks(text, args):
@@ -311,7 +309,7 @@ def process_chunks(text, args):
                             user_input = user_input.removeprefix("@3 ")
                             tmp_model = GPT35
 
-                        print(f"== Side conversation({tmp_model}) ==")
+                        print(f"== Side conversation ==")
                         _send(user_input,
                               conversation=conversation,
                               model=tmp_model)
@@ -319,7 +317,6 @@ def process_chunks(text, args):
                     else:
                         break
             except EOFError:
-                print("Bye.")
                 break
         elif args.quiet is False:
             print(f"---({read_count}/{text_length})({consumed:.2f}%)")
