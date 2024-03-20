@@ -1,81 +1,82 @@
-# GPT Utility Script
+# GPT Python CLI Utility
 
-A versatile Python script to generate text using OpenAI's GPT models. It supports extracting content from URLs or files and engaging in interactive conversation modes.
+This GPT utility is a versatile tool for generating text with different GPT models provided by OpenAI. You can supply input through a URL, a file path, or directly as a prompt text, making it highly flexible for various applications, including automation scripts, interface building, or simple exploratory conversations with AI models. The tool also offers functionalities like fetching content from URLs, processing PDF and text files, and interactive talking mode with history tracking.
 
 ## Features
 
-- Fetch and process text content from specified URLs.
-- Read and handle text from files, including PDFs.
-- Interactive conversation mode with an AI model.
-- Utilize different GPT models for text generation.
-- Customizable conversation history depth and text chunk sizes for processing.
+- Support for multiple GPT models including GPT-3.5 and GPT-4.
+- Input can be supplied via URLs, file paths, or directly as text.
+- Automatic fetching and processing of content from URLs, including PDFs and HTML pages.
+- Interactive talk mode with AI, enabling a conversational interface.
+- Customizable conversation history depth to influence AI responses.
+- Configuration through environment variables and command-line arguments for flexibility.
+- Detailed logging for troubleshooting and analysis.
 
 ## Requirements
 
-- Python 3
-- Packages: `argparse`, `filetype`, `hashlib`, `logging`, `os`, `re`, `requests`, `bs4`, `collections`, `datetime`, `dotenv`, `openai`, `prompt_toolkit`, `pypdf`, `requests`
+- Python 3.6 or newer
+- OpenAI API key
+- Additional Python libraries: `argparse`, `filetype`, `hashlib`, `logging`, `openai`, `requests`, `beautifulsoup4`, `dotenv`, `prompt_toolkit`, `pypdf`
 
 ## Installation
 
-1. Install the required Python packages:
+Before running the tool, ensure you have Python installed and then install the required libraries using pip:
 
-```shell
-pip install -r requirements.txt
+```bash
+pip install argparse filetype hashlib logging openai requests beautifulsoup4 python-dotenv prompt_toolkit pypdf
 ```
 
-2. Ensure you have an OpenAI API key and set it as an environment variable `OPENAI_API_KEY` or directly in the script if not using environment variables.
+## Configuration
+
+1. **API Key**: Set your OpenAI API key in your environment variables as `OPENAI_API_KEY`, or you can specify it directly in the `gpt.py` script.
+
+2. **Logging and .env File**: Customize logging level and other settings by modifying `.env` file variables or directly within the script.
 
 ## Usage
 
-### Basic Command
+### Command Line Arguments
 
-```shell
-python gpt.py [source]
+- `source`: Specify the input source. Can be a URL, a file path, or direct text.
+- `-b, --batch`: Run in batch mode without waiting for user inputs. Useful for scripts.
+- `-c, --chunk_size`: Define the size of text chunks for processing. Default is 3000 characters.
+- `-d, --depth`: Set the number of past interactions to remember. Default is 6.
+- `-m, --model`: Choose the GPT model. Use `3` for GPT-3.5-turbo, `4` for GPT-4-turbo-preview, or an explicit model name.
+- `-p, --prompt`: Provide a direct prompt for text generation.
+- `--pages`: For PDFs, specify pages to read with a comma-separated list or ranges (e.g., "1,3-5").
+- `-q, --quiet`: Suppress status output. Applies only in batch mode.
+- `-s, --start_pos`: Set the start position (in characters) for reading. Default is 1.
+
+### Running the tool
+
+Interactive mode without any source (defaults to talking mode):
+
+```bash
+./gpt.py
 ```
 
-- `[source]` can be a URL, a file path, or a direct prompt. If omitted, the script enters conversation mode.
+Supplying a PDF file for content extraction and processing:
 
-### Options
-
-- `-b`, `--batch`: Proceed without waiting for further input. Ideal for scripting.
-- `-c`, `--chunk_size`: Set the text chunk size (in characters) for reading operations. Default is configured in the script.
-- `-d`, `--depth`: Define the number of previous interactions to consider in the conversation history. Default is configured in the script.
-- `-m`, `--model`: Choose the GPT model for text generation. Options: `3` (for gpt-3.5-turbo), `4` (for gpt-4-turbo-preview), or an explicit OpenAI model name.
-- `-p`, `--prompt`: Directly provide the text prompt for generation. Overrides default prompt if provided.
-- `--pages`: Specify PDF pages to read for file inputs. Use a comma-separated list and ranges. Example: `"1,3,4-7,11"`.
-- `-q`, `--quiet`: Suppress the status line. Only applies in batch mode.
-- `-s`, `--start_pos`: The starting position (in characters) for reading. Default is 1.
-
-### Examples
-
-- Fetch and process content from a URL:
-
-```shell
-python gpt.py "http://example.com"
+```bash
+./gpt.py path/to/document.pdf --model 4
 ```
 
-- Read and process a text file:
+Fetching content from a URL and engaging in conversation based on fetched content:
 
-```shell
-python gpt.py "./path/to/file.txt"
+```bash
+./gpt.py "https://example.com/article" --prompt "Summarize this article."
 ```
 
-- Enter conversation mode with a model:
+Batch mode operation for scripting and automation:
 
-```shell
-python gpt.py
+```bash
+./gpt.py "https://example.com/news" --batch --model 3
 ```
 
-- Process a PDF file, using gpt-4 model, focusing on specific pages:
+## Customizing and Extending
 
-```shell
-python gpt.py -m 4 --pages "1,2,5-7" "./path/to/document.pdf"
-```
-
-## Logging
-
-The script logs its operation details in `gpt.log` file. You can alter the logging level and file path by modifying the script configuration.
+The tool is designed to be easily customizable and extendable. You can adjust conversation depth, chunk sizes for content processing, choose between various GPT models dynamically, or even extend it to include new sources of input.
 
 ## License
 
-This script is released under the MIT License. See the LICENSE file for more details.
+This utility is open-source and free to use, modify, and distribute under the terms of the MIT License.
+
