@@ -70,7 +70,10 @@ class FixedSizeArray:
 
 
 # Helper Functions
-def _send(message, conversation, args):
+def _send(message, conversation, model):
+
+    message = message.strip()
+
     messages = []
 
     if conversation:
@@ -79,7 +82,7 @@ def _send(message, conversation, args):
     if SYSTEM_PROMPT is not None:
         messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
-    messages.append({"role": "user", "content": message.strip()})
+    messages.append({"role": "user", "content": message})
 
     logging.debug(f"messages: {messages}")
 
@@ -88,7 +91,7 @@ def _send(message, conversation, args):
     try:
 
         response = openai_client.chat.completions.create(
-            model=args.model,
+            model=model,
             messages=messages,
             stream=True,
             timeout=30
@@ -101,7 +104,7 @@ def _send(message, conversation, args):
                 print(chunk_message, end="", flush=True)
 
         if conversation is not None:
-            conversation.append({"role": "user", "content": message.strip()})
+            conversation.append({"role": "user", "content": message})
             conversation.append({"role": "assistant", "content": all_content})
 
     except Exception as e:
@@ -109,7 +112,7 @@ def _send(message, conversation, args):
         print(e)
 
     logging.debug(f"(You): {message}")
-    logging.debug(f"({args.model}): {all_content}")
+    logging.debug(f"({model}): {all_content}")
 
     return all_content
 
@@ -223,8 +226,10 @@ def read_and_process(args):
 
 def process_talk(args):
 
+    model = args.model
+
     if args.source is not None:
-        _send(args.source, conversation=None, args=args)
+        _send(args.source, conversation=None, model=model)
         print()
     else:
         history = FileHistory(INPUT_HISTORY)
@@ -235,11 +240,20 @@ def process_talk(args):
                                     history=history,
                                     key_bindings=kb,
                                     multiline=True)
-                if user_input.strip() == '':
+                user_input = user_input.strip()
+                if user_input == '':
                     break
+
+                if user_input.startswith("@4 "):
+                    user_input = user_input.removeprefix("@4 ")
+                    model = GPT4
+                elif user_input.startswith("@3 "):
+                    user_input = user_input.removeprefix("@3 ")
+                    model = GPT35
+
                 print("---")
-                print(f"({args.model}): ", end="")
-                _send(user_input, conversation=conversation, args=args)
+                print(f"({model}): ", end="")
+                _send(user_input, conversation=conversation, model=model)
                 print("\n---")
             except UnicodeDecodeError as e:
                 logging.error(e)
@@ -266,7 +280,7 @@ def process_chunks(text, args):
         chunk = text[i:i+args.chunk_size]
         if len(chunk) > 0:
             message = f"{args.prompt}\n\n{chunk}"
-            content = _send(message, None, args)
+            content = _send(message, None, args.model)
             conversation.append({"role": "assistant", "content": content})
             print()
 
@@ -284,12 +298,24 @@ def process_chunks(text, args):
                             history=history,
                             key_bindings=kb,
                             multiline=True)
+                    user_input = user_input.strip()
+                    
                     if user_input.lower() == 'q':
                         return
                     elif user_input.strip() != '':
-                        print("== Side conversation ==")
-                        _send(user_input, conversation=conversation, args=args)
-                        print("\n== Side conversation ==")
+                        tmp_model = args.model
+                        if user_input.startswith("@4 "):
+                            user_input = user_input.removeprefix("@4 ")
+                            tmp_model = GPT4
+                        elif user_input.startswith("@3 "):
+                            user_input = user_input.removeprefix("@3 ")
+                            tmp_model = GPT35
+
+                        print(f"== Side conversation({tmp_model}) ==")
+                        _send(user_input,
+                              conversation=conversation,
+                              model=tmp_model)
+                        print("\n====")
                     else:
                         break
             except EOFError:
