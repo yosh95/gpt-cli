@@ -8,69 +8,77 @@ LIST_SIZE = 5
 
 def get():
 
+    page = 1
+
     base_url = "https://www.wired.com{path}"
-    most_recent = "/most-recent"
+    most_recent = "/most-recent?page={page}"
 
-    response = requests.get(
-            base_url.format(
-                path=most_recent))
-
-    if response.status_code == 200:
-        html_content = response.text
-    else:
-        print(f"Failed to retrieve the web page: {response.status_code}")
-        html_content = ""
-        return
-
-    soup = BeautifulSoup(html_content,
-                         "html.parser")
-
-    urls = []
-
-    for a in soup.select("[class^=SummaryItemHedLink]", start=1):
-        href = base_url.format(path=a.get('href'))
-
-        urls.append({"text":a.text, "href":href})
-
-    print(len(urls))
-
-    idx = 0
+    print("---")
 
     while True:
 
-        print("---")
-        for i in range(idx, (idx + LIST_SIZE)):
-            if i >= len(urls):
-                break
-            print(f"({i+1}) {urls[i]['text']}")
+        response = requests.get(
+                base_url.format(
+                    path=most_recent.format(
+                        page=page)))
 
-        print("---")
-        try:
-            user_input = input("> ")
-        except EOFError:
-            print()
+        if response.status_code == 200:
+            html_content = response.text
+        else:
+            print(f"Failed to retrieve the web page: {response.status_code}")
+            html_content = ""
             return
 
-        if user_input == 'q':
-            break
-        elif user_input == '':
-            idx += LIST_SIZE
-            if idx >= len(urls):
-                idx = 0
-            continue
-        else:
-            try:
-                num = int(user_input)
-            except ValueError:
-                print(f"Invalid input:{user_input}")
-                continue
+        soup = BeautifulSoup(html_content,
+                             "html.parser")
 
-        if num >= 1 and num <= len(urls):
-            command = f"gpt {urls[num - 1]['href']}"
-            print(command)
-            os.system(command)
-        else:
-            print(f"Invalid input:{user_input}")
+        urls = []
+
+        for a in soup.select("[class^=SummaryItemHedLink]", start=1):
+            href = base_url.format(path=a.get('href'))
+
+            urls.append({"text":a.text, "href":href})
+
+        idx = 0
+
+        while True:
+
+            brk = False
+            for i in range(idx, (idx + LIST_SIZE)):
+                if i >= len(urls):
+                    brk = True
+                    break
+                print(f"({i+1}) {urls[i]['text']}")
+            if brk is True:
+                page += 1
+                break
+
+            print("---")
+            try:
+                user_input = input("> ")
+            except EOFError:
+                print()
+                return
+            print("---")
+
+            if user_input == 'q':
+                return
+            elif user_input == '':
+                idx += LIST_SIZE
+                continue
+            else:
+                try:
+                    num = int(user_input)
+                except ValueError:
+                    print(f"Invalid input:{user_input}")
+                    continue
+
+            if num >= 1 and num <= len(urls):
+                command = f"gpt {urls[num - 1]['href']}"
+                print(command)
+                os.system(command)
+            else:
+                print(f"Invalid input:{user_input}")
 
 
 

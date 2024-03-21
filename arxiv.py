@@ -60,7 +60,7 @@ def get_arxiv(category):
             print("---")
 
             if user_input == 'q':
-                break
+                return
             elif user_input == '':
                 skip += show
                 break
@@ -77,9 +77,6 @@ def get_arxiv(category):
                 os.system(command)
             else:
                 print(f"Invalid input:{user_input}")
-
-        if user_input == 'q':
-            break
 
 
 if __name__ == "__main__":
