@@ -5,12 +5,12 @@ import requests
 from bs4 import BeautifulSoup
 
 DEFAULT_CATEGORY = "cs"
-DEFAULT_LIST_SIZE = 5
+LIST_SIZE = 5
 
 def get_arxiv(category):
 
     skip = 0
-    show = DEFAULT_LIST_SIZE
+    show = 50
 
     base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
 
@@ -45,11 +45,22 @@ def get_arxiv(category):
         for span in soup.find_all("span", class_="primary-subject"):
             subjects.append(span.text.strip())
 
+        idx = 0
+
+        print(f"--- category:{category}")
+
         while True:
-            print("---")
-            print(f"category:{category}\n")
-            for i, item in enumerate(arxiv_ids):
+
+            brk = False
+            for i in range(idx, (idx + LIST_SIZE)):
+                if i >= len(arxiv_ids):
+                    brk = True
+                    break
                 print(f"({i+1}) {titles[i]} ({arxiv_ids[i]}) ({subjects[i]})")
+            if brk is True:
+                skip += len(arxiv_ids)
+                break
+
             print("---")
             try:
                 user_input = input("> ")
@@ -62,8 +73,8 @@ def get_arxiv(category):
             if user_input == 'q':
                 return
             elif user_input == '':
-                skip += show
-                break
+                idx += LIST_SIZE
+                continue
             else:
                 try:
                     num = int(user_input)
