@@ -4,7 +4,7 @@ import requests
 
 from bs4 import BeautifulSoup
 
-LIST_SIZE = 4
+LIST_SIZE = 5
 
 def get():
 
