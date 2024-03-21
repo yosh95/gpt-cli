@@ -21,9 +21,7 @@ from pypdf import PdfReader
 load_dotenv()
 
 # OpenAI
-openai_client = openai.OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY",
-                               "<your OpenAI API key if not set as env var>"))
+openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
 # prompt_toolkit
 kb = KeyBindings()
