@@ -242,8 +242,10 @@ def process_talk(args):
                                     key_bindings=kb,
                                     multiline=True)
                 user_input = user_input.strip()
-                if user_input == '':
+                if user_input == 'q':
                     break
+                if user_input == '':
+                    continue
 
                 if user_input.startswith("@4 "):
                     user_input = user_input.removeprefix("@4 ")
