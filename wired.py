@@ -45,7 +45,11 @@ def get():
             print(f"({i+1}) {urls[i]['text']}")
 
         print("---")
-        user_input = input("(q to quit)> ")
+        try:
+            user_input = input("> ")
+        except EOFError:
+            print()
+            return
 
         if user_input == 'q':
             break

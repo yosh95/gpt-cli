@@ -51,7 +51,12 @@ def get_arxiv(category):
             for i, item in enumerate(arxiv_ids):
                 print(f"({i+1}) {titles[i]} ({arxiv_ids[i]}) ({subjects[i]})")
             print("---")
-            user_input = input("(q to quit)> ")
+            try:
+                user_input = input("> ")
+            except EOFError:
+                print()
+                return
+
             print("---")
 
             if user_input == 'q':
