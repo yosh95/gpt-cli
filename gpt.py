@@ -157,23 +157,11 @@ def fetch_url_content(url):
 
 
 def expand_page_range(page_range_str):
-    """Parse a string specifying page ranges and return a list of page numbers.
-    Raises ValueError if the page_range_str contains invalid characters.
-
-    Args:
-        page_range_str (str): A string specifying page ranges,
-                              e.g., "1,3,4-9,13,14-20,30"
-
-    Returns:
-        list: A list of page numbers.
-    """
-
     page_nums = []
 
     if page_range_str is None:
         return page_nums
 
-    # Check if the page_range_str contains only digits, commas, and hyphens
     if not re.match(r'^[\d,-]+$', page_range_str):
         raise ValueError("Invalid characters found in page range string.")
 
@@ -181,7 +169,6 @@ def expand_page_range(page_range_str):
     for part in page_range_str.split(','):
         if '-' in part:
             start, end = part.split('-')
-            # Ensure start and end of ranges are numeric
             if not start.isdigit() or not end.isdigit():
                 raise ValueError("Invalid range found in page range string.")
             page_nums.extend(range(int(start), int(end) + 1))
