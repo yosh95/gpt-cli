@@ -275,63 +275,58 @@ def process_chunks(text, args):
             read_count = text_length
 
         consumed = read_count / text_length * 100
-        if args.batch is False:
-            try:
-                while True:
-                    user_input = prompt(
-                            f"---({read_count}/{text_length})"
-                            + f"({consumed:.2f}%)\n(You): ",
-                            history=history,
-                            key_bindings=kb,
-                            multiline=True)
-                    user_input = user_input.strip()
-                    
-                    if user_input.lower() == 'q':
-                        return
-                    elif user_input.strip() != '':
-                        tmp_model = args.model
-                        if user_input.startswith("@4 "):
-                            user_input = user_input.removeprefix("@4 ")
-                            tmp_model = GPT4
-                        elif user_input.startswith("@3 "):
-                            user_input = user_input.removeprefix("@3 ")
-                            tmp_model = GPT35
-
-                        print(f"== Side conversation ==")
-                        _send(user_input,
-                              conversation=conversation,
-                              model=tmp_model)
-                        print("\n====")
-                    else:
-                        break
-            except EOFError:
-                break
-        elif args.quiet is False:
-            print(f"---({read_count}/{text_length})({consumed:.2f}%)")
-
-
-def check_chunks(text, args):
-    if args.batch is False or args.quiet is False:
         try:
             while True:
-                user_input = prompt(f"---(--/{len(text)})(0.00%)"
-                                    + f"(chunk_size={args.chunk_size})"
-                                    + "\n(You): ")
+                user_input = prompt(
+                        f"---({read_count}/{text_length})"
+                        + f"({consumed:.2f}%)\n(You): ",
+                        history=history,
+                        key_bindings=kb,
+                        multiline=True)
+                user_input = user_input.strip()
+                
                 if user_input.lower() == 'q':
                     return
-                elif user_input != '':
-                    try:
-                        num = int(user_input)
-                        args.chunk_size = num
-                        break
-                    except ValueError:
-                        print(f"Invalid number:{user_input}")
+                elif user_input.strip() != '':
+                    tmp_model = args.model
+                    if user_input.startswith("@4 "):
+                        user_input = user_input.removeprefix("@4 ")
+                        tmp_model = GPT4
+                    elif user_input.startswith("@3 "):
+                        user_input = user_input.removeprefix("@3 ")
+                        tmp_model = GPT35
+
+                    print(f"== Side conversation ==")
+                    _send(user_input,
+                          conversation=conversation,
+                          model=tmp_model)
+                    print("\n====")
                 else:
                     break
         except EOFError:
-            return
+            break
 
-        process_chunks(text, args)
+
+def check_chunks(text, args):
+    try:
+        while True:
+            user_input = prompt(f"---(--/{len(text)})(0.00%)"
+                                + f"(chunk_size={args.chunk_size}): ")
+            if user_input.lower() == 'q':
+                return
+            elif user_input != '':
+                try:
+                    num = int(user_input)
+                    args.chunk_size = num
+                    break
+                except ValueError:
+                    print(f"Invalid number:{user_input}")
+            else:
+                break
+    except EOFError:
+        return
+
+    process_chunks(text, args)
 
 
 def process_pdf(file_name, args):
@@ -369,11 +364,6 @@ if __name__ == "__main__":
                         help="Specify the source for the prompt. "
                              + "Can be a URL, a file path, "
                              + "or a direct prompt text.")
-    parser.add_argument('-b',
-                        '--batch',
-                        action='store_true',
-                        help="Proceed without waiting for "
-                             + "further input. Ideal for scripting.")
     parser.add_argument('-c',
                         '--chunk_size',
                         type=int,
@@ -401,11 +391,6 @@ if __name__ == "__main__":
                         help="Specify PDF pages to read. Use a "
                              + "comma-separated list and ranges. "
                              + "Example: \"1,3,4-7,11\".")
-    parser.add_argument('-q',
-                        '--quiet',
-                        action='store_true',
-                        help="Suppress the status line. "
-                             + "Only applies in batch mode.")
     parser.add_argument('-s',
                         '--start_pos',
                         type=int,
