@@ -97,7 +97,7 @@ def _send(message, conversation, model):
             timeout=30
         )
 
-        print(f"({model})\n")
+        print(f"({model}):\n")
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
@@ -277,6 +277,7 @@ def process_chunks(text, args):
     for i in range(args.start_pos - 1, text_length, args.chunk_size):
         chunk = text[i:i+args.chunk_size]
         if len(chunk) > 0:
+            print("---")
             message = f"{args.prompt}\n\n{chunk}"
             content = _send(message, None, args.model)
             conversation.append({"role": "assistant", "content": content})
@@ -292,7 +293,7 @@ def process_chunks(text, args):
                 while True:
                     user_input = prompt(
                             f"---({read_count}/{text_length})"
-                            + f"({consumed:.2f}%): ",
+                            + f"({consumed:.2f}%)\n(You): ",
                             history=history,
                             key_bindings=kb,
                             multiline=True)
@@ -327,7 +328,8 @@ def check_chunks(text, args):
         try:
             while True:
                 user_input = prompt(f"---(--/{len(text)})(0.00%)"
-                                    + f"(chunk_size={args.chunk_size}): ")
+                                    + f"(chunk_size={args.chunk_size})"
+                                    + "\n(You): ")
                 if user_input.lower() == 'q':
                     return
                 elif user_input != '':
