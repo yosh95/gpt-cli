@@ -3,7 +3,6 @@
 import argparse
 import filetype
 import hashlib
-import logging
 import os
 import openai
 import re
@@ -20,10 +19,6 @@ from pypdf import PdfReader
 
 # Initialize Logging and .env
 load_dotenv()
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper(),
-                    filename="gpt.log",
-                    filemode="a",
-                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 # OpenAI
 openai_client = openai.OpenAI(
@@ -84,8 +79,6 @@ def _send(message, conversation, model):
 
     messages.append({"role": "user", "content": message})
 
-    logging.debug(f"messages: {messages}")
-
     all_content = ""
 
     try:
@@ -109,11 +102,7 @@ def _send(message, conversation, model):
             conversation.append({"role": "assistant", "content": all_content})
 
     except Exception as e:
-        logging.error(e)
         print(e)
-
-    logging.debug(f"(You): {message}")
-    logging.debug(f"({model}): {all_content}")
 
     return all_content
 
@@ -122,7 +111,6 @@ def fetch_url_content(url):
     try:
         response = requests.get(url, timeout=30.0)
     except Exception as e:
-        logging.error(e)
         print(e)
         return
 
@@ -258,7 +246,6 @@ def process_talk(args):
                 _send(user_input, conversation=conversation, model=model)
                 print("\n---")
             except UnicodeDecodeError as e:
-                logging.error(e)
                 print(e)
             except EOFError:
                 print()
