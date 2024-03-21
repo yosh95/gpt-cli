@@ -4,6 +4,8 @@ import requests
 
 from bs4 import BeautifulSoup
 
+LIST_SIZE = 4
+
 def get():
 
     base_url = "https://www.wired.com{path}"
@@ -30,17 +32,27 @@ def get():
 
         urls.append({"text":a.text, "href":href})
 
+    print(len(urls))
+
+    idx = 0
+
     while True:
 
-        for i, a in enumerate(urls, start=1):
-            print(f"({i}) {a['text']} ({a['href']})")
+        print("---")
+        for i in range(idx, (idx + LIST_SIZE)):
+            if i >= len(urls):
+                break
+            print(f"({i+1}) {urls[i]['text']}")
+
         print("---")
         user_input = input("(q to quit)> ")
-        print("---")
 
         if user_input == 'q':
             break
         elif user_input == '':
+            idx += LIST_SIZE
+            if idx >= len(urls):
+                idx = 0
             continue
         else:
             try:
