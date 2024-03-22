@@ -233,7 +233,6 @@ def process_talk(args):
             except UnicodeDecodeError as e:
                 print(e)
             except EOFError:
-                print()
                 break
 
 
