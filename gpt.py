@@ -185,15 +185,16 @@ def process_talk(args):
                 user_input = user_input.strip()
                 if user_input == 'q':
                     break
+
+                if user_input.startswith("@4"):
+                    user_input = user_input.removeprefix("@4")
+                    model = GPT4
+                elif user_input.startswith("@3"):
+                    user_input = user_input.removeprefix("@3")
+                    model = GPT35
+
                 if user_input == '':
                     continue
-
-                if user_input.startswith("@4 "):
-                    user_input = user_input.removeprefix("@4 ")
-                    model = GPT4
-                elif user_input.startswith("@3 "):
-                    user_input = user_input.removeprefix("@3 ")
-                    model = GPT35
 
                 print("---")
                 _send(user_input, conversation=conversation, model=model)
