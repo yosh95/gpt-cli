@@ -2,7 +2,6 @@
 
 import argparse
 import filetype
-import hashlib
 import os
 import openai
 import re
@@ -10,8 +9,8 @@ import requests
 
 from bs4 import BeautifulSoup
 from collections import deque
-from datetime import datetime
 from dotenv import load_dotenv
+from io import BytesIO
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import prompt
@@ -38,15 +37,15 @@ def _(event):
 
 
 # Constants
-DOWNLOAD_DIR = os.path.join(".", "downloads")
-GPT4, GPT35 = "gpt-4-turbo-preview", "gpt-3.5-turbo"
-SYSTEM_PROMPT = os.getenv("GPT_SYSTEM_PROMPT", None)
+DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_PROMPT = os.getenv(
         "GPT_DEFAULT_PROMPT",
-        "Please summarize the following sentences in English:")
-DEFAULT_CHUNK_SIZE = 3000
+        "Please summarize the following sentences:")
 DEFAULT_TALK_QUEUE_SIZE = 6
+DEFAULT_TIMEOUT_SEC = 30
+GPT4, GPT35 = "gpt-4-turbo-preview", "gpt-3.5-turbo"
 INPUT_HISTORY = os.path.expanduser("~") + "/.gpt_prompt_history"
+SYSTEM_PROMPT = os.getenv("GPT_SYSTEM_PROMPT", None)
 
 
 # Classes
@@ -85,7 +84,7 @@ def _send(message, conversation, model):
             model=model,
             messages=messages,
             stream=True,
-            timeout=30
+            timeout=DEFAULT_TIMEOUT_SEC
         )
 
         print(f"({model}):\n")
@@ -103,57 +102,6 @@ def _send(message, conversation, model):
         print(e)
 
     return all_content
-
-
-def fetch_url_content(url):
-    try:
-        response = requests.get(url, timeout=30.0)
-    except Exception as e:
-        print(e)
-        return
-
-    response.raise_for_status()
-
-    content_type = response.headers['Content-Type']
-
-    content = response.content
-
-    attr = "wb"
-
-    if 'application/pdf' in content_type:
-        attr = "wb"
-        ext = "pdf"
-    elif 'text/html' in content_type:
-        attr = "w"
-        soup = BeautifulSoup(content, 'html.parser')
-        content = soup.get_text(' ', strip=True)
-        ext = "txt"
-    elif 'text' in content_type:
-        attr = "w"
-        content = content.decode('utf-8')
-        ext = "txt"
-    else:
-        attr = "wb"
-        ext = "dat"
-
-    formatted_date_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-    md5 = hashlib.md5()
-    md5.update(url.encode())
-    file_name = md5.hexdigest()
-    file_path = os.path.join(
-            DOWNLOAD_DIR,
-            f"{formatted_date_time}-{file_name}.{ext}")
-    if ext == 'txt':
-        with open(file_path, attr, encoding='utf-8') as file:
-            file.write(content)
-    else:
-        with open(file_path, attr) as file:
-            file.write(content)
-
-    return file_path
 
 
 def expand_page_range(page_range_str):
@@ -179,25 +127,45 @@ def expand_page_range(page_range_str):
     return page_nums
 
 
+def read_pdf(byte_stream, pages=None):
+    if pages is None:
+        pages_array = None
+    else:
+        pages_array = expand_page_range(pages)
+
+    reader = PdfReader(byte_stream)
+    text = ''
+    for i, page in enumerate(reader.pages, start=1):
+        if (pages_array is None) or (i in pages_array):
+            text += ' ' + page.extract_text()
+    return text
+
+
+def fetch_url_content(url, pages=None):
+    try:
+        response = requests.get(url, timeout=DEFAULT_TIMEOUT_SEC)
+    except Exception as e:
+        print(e)
+        return
+
+    response.raise_for_status()
+
+    content_type = response.headers['Content-Type']
+
+    content = response.content
+
+    attr = "wb"
+
+    if 'application/pdf' in content_type:
+        return read_pdf(BytesIO(content))
+    elif 'text/html' in content_type:
+        soup = BeautifulSoup(content, 'html.parser')
+        return soup.get_text(' ', strip=True)
+    else:
+        return content.decode('utf-8')
+
+
 # Processing Functions
-def read_and_process(args):
-    if args.source.startswith("http"):
-        file_name = fetch_url_content(args.source)
-        if file_name is None:
-            return
-    else:
-        file_name = args.source
-
-    if os.path.exists(file_name):
-        kind = filetype.guess(file_name)
-        if kind and kind.extension == 'pdf':
-            process_pdf(file_name, args)
-        else:
-            process_text(file_name, args)
-    else:
-        process_talk(args)
-
-
 def process_talk(args):
 
     model = args.model
@@ -316,12 +284,8 @@ def check_chunks(text, args):
 
 
 def process_pdf(file_name, args):
-    pages_array = expand_page_range(args.pages)
-    reader = PdfReader(file_name)
-    text = ''
-    for i, page in enumerate(reader.pages, start=1):
-        if (args.pages is None) or (i in pages_array):
-            text += ' ' + page.extract_text()
+    with open(file_name, "rb") as fh:
+        text = read_pdf(BytesIO(fh.read()))
 
     if text != '':
         check_chunks(text, args)
@@ -334,6 +298,24 @@ def process_text(file_name, args):
         text = file.read()
         if text != '':
             check_chunks(text, args)
+
+
+def read_and_process(args):
+    if args.source.startswith("http"):
+        text = fetch_url_content(args.source)
+        if text != '':
+            check_chunks(text, args)
+            return
+
+    if os.path.exists(args.source):
+        kind = filetype.guess(args.source)
+        if kind and kind.extension == 'pdf':
+            process_pdf(args.source, args)
+        else:
+            process_text(args.source, args)
+    else:
+        process_talk(args)
+
 
 
 # CLI Interface
