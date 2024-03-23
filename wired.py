@@ -4,7 +4,7 @@ import unicodedata
 
 from bs4 import BeautifulSoup
 
-LIST_SIZE = 5
+LIST_SIZE = 10
 
 
 def normalize_unicode(text):
