@@ -6,6 +6,7 @@ import os
 import openai
 import re
 import requests
+import unicodedata
 
 from bs4 import BeautifulSoup
 from collections import deque
@@ -127,6 +128,11 @@ def expand_page_range(page_range_str):
     return page_nums
 
 
+def normalize_unicode(text):
+    ascii_text = unicodedata.normalize('NFKC', text)
+    return ascii_text
+
+
 def read_pdf(byte_stream, pages=None):
     if pages is None:
         pages_array = None
@@ -183,7 +189,7 @@ def process_talk(args):
                                     key_bindings=kb,
                                     multiline=True)
                 user_input = user_input.strip()
-                if user_input == 'q':
+                if normalize_unicode(user_input) == 'q':
                     break
 
                 if user_input.startswith("@4"):
@@ -240,16 +246,19 @@ def process_chunks(text, args):
                         multiline=True)
                 user_input = user_input.strip()
                 
-                if user_input.lower() == 'q':
+                if normalize_unicode(user_input) == 'q':
                     return
                 elif user_input.strip() != '':
                     tmp_model = args.model
-                    if user_input.startswith("@4 "):
-                        user_input = user_input.removeprefix("@4 ")
+                    if user_input.startswith("@4"):
+                        user_input = user_input.removeprefix("@4")
                         tmp_model = GPT4
-                    elif user_input.startswith("@3 "):
-                        user_input = user_input.removeprefix("@3 ")
+                    elif user_input.startswith("@3"):
+                        user_input = user_input.removeprefix("@3")
                         tmp_model = GPT35
+
+                    if user_input == '':
+                        continue
 
                     print(f"== Side conversation ==")
                     _send(user_input,
@@ -267,7 +276,7 @@ def check_chunks(text, args):
         while True:
             user_input = prompt(f"---(--/{len(text)})(0.00%)"
                                 + f"(chunk_size={args.chunk_size}): ")
-            if user_input.lower() == 'q':
+            if normalize_unicode(user_input) == 'q':
                 return
             elif user_input != '':
                 try:
