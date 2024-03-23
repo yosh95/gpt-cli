@@ -39,6 +39,7 @@ def get_content(href):
 
     print("---")
     print(text)
+    input("> ")
 
 
 def get():
