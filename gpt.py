@@ -15,6 +15,7 @@ from io import BytesIO
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import prompt
+
 from pypdf import PdfReader
 
 # Initialize Logging and .env
@@ -22,19 +23,6 @@ load_dotenv()
 
 # OpenAI
 openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
-
-# prompt_toolkit
-kb = KeyBindings()
-
-
-@kb.add('escape', 'enter')
-def _(event):
-    event.current_buffer.insert_text('\n')
-
-
-@kb.add('enter')
-def _(event):
-    event.current_buffer.validate_and_handle()
 
 
 # Constants
@@ -60,6 +48,36 @@ class FixedSizeArray:
 
     def get_array(self):
         return list(self.array)
+
+    def get_last(self):
+        return self.array[-1]
+
+    def get_size(self):
+        return len(self.array)
+
+
+# Global conversation
+conversation = None
+
+# prompt_toolkit
+kb = KeyBindings()
+
+
+@kb.add('escape', 'enter')
+def _(event):
+    event.current_buffer.insert_text('\n')
+
+
+@kb.add('enter')
+def _(event):
+    event.current_buffer.validate_and_handle()
+
+
+@kb.add('c-y')
+def insert_custom_text(event):
+    if conversation != None and conversation.get_size() > 0:
+        text = conversation.get_last()['content']
+        event.app.current_buffer.insert_text(text)
 
 
 # Helper Functions
@@ -163,7 +181,7 @@ def fetch_url_content(url, pages=None):
     attr = "wb"
 
     if 'application/pdf' in content_type:
-        return read_pdf(BytesIO(content))
+        return read_pdf(BytesIO(content), pages)
     elif 'text/html' in content_type:
         soup = BeautifulSoup(content, 'html.parser')
         return soup.get_text(' ', strip=True)
@@ -173,6 +191,8 @@ def fetch_url_content(url, pages=None):
 
 # Processing Functions
 def process_talk(args):
+
+    global conversation
 
     model = args.model
 
@@ -212,6 +232,8 @@ def process_talk(args):
 
 
 def process_chunks(text, args):
+
+    global conversation
 
     read_count = args.start_pos - 1
     text_length = len(text)
@@ -295,7 +317,7 @@ def check_chunks(text, args):
 
 def process_pdf(file_name, args):
     with open(file_name, "rb") as fh:
-        text = read_pdf(BytesIO(fh.read()))
+        text = read_pdf(BytesIO(fh.read()), args.pages)
 
     if text != '':
         check_chunks(text, args)
@@ -312,7 +334,7 @@ def process_text(file_name, args):
 
 def read_and_process(args):
     if args.source.startswith("http"):
-        text = fetch_url_content(args.source)
+        text = fetch_url_content(args.source, args.pages)
         if text != '':
             check_chunks(text, args)
             return
