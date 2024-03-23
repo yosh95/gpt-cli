@@ -1,9 +1,16 @@
 import os
 import requests
+import unicodedata
 
 from bs4 import BeautifulSoup
 
 LIST_SIZE = 5
+
+
+def normalize_unicode(text):
+    ascii_text = unicodedata.normalize('NFKC', text)
+    return ascii_text
+
 
 def get():
 
@@ -60,7 +67,7 @@ def get():
                 return
             print("---")
 
-            if user_input == 'q':
+            if normalize_unicode(user_input) == 'q':
                 return
             elif user_input == '':
                 idx += LIST_SIZE
