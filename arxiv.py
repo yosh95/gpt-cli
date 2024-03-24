@@ -4,9 +4,13 @@ import requests
 import unicodedata
 
 from bs4 import BeautifulSoup
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.shortcuts import prompt
 
 DEFAULT_CATEGORY = "cs"
 LIST_SIZE = 5
+
+history = InMemoryHistory()
 
 
 def normalize_unicode(text):
@@ -20,6 +24,8 @@ def get_arxiv(category):
     show = 50
 
     base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
+
+    global history
 
     while True:
         response = requests.get(base_url.format(category=category, skip=skip, show=show))
@@ -70,7 +76,7 @@ def get_arxiv(category):
 
             print("---")
             try:
-                user_input = input("> ")
+                user_input = prompt("> ", history=history)
             except EOFError:
                 print()
                 return
