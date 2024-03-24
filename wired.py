@@ -3,9 +3,12 @@ import requests
 import unicodedata
 
 from bs4 import BeautifulSoup
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.shortcuts import prompt
 
 LIST_SIZE = 10
 
+history = InMemoryHistory()
 
 def normalize_unicode(text):
     ascii_text = unicodedata.normalize('NFKC', text)
@@ -20,6 +23,8 @@ def get():
     most_recent = "/most-recent?page={page}"
 
     print("---")
+
+    global history
 
     while True:
 
@@ -61,7 +66,7 @@ def get():
 
             print("---")
             try:
-                user_input = input("> ")
+                user_input = prompt("> ", history=history)
             except EOFError:
                 print()
                 return
