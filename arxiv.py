@@ -18,6 +18,18 @@ def normalize_unicode(text):
     return ascii_text
 
 
+def get_categories():
+
+    url = "https://arxiv.org/category_taxonomy"
+
+    page = requests.get(url)
+
+    bs = BeautifulSoup(page.content, "html.parser")
+
+    for tag in bs.find_all("h4"):
+        print(tag.text)
+
+
 def get_arxiv(category):
 
     skip = 0
@@ -113,6 +125,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.category is None:
-        args.category = DEFAULT_CATEGORY
+        get_categories()
+    else:
+        get_arxiv(args.category)
 
-    get_arxiv(args.category)
