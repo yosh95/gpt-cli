@@ -78,7 +78,6 @@ def get_arxiv(category):
             try:
                 user_input = prompt("> ", history=history)
             except EOFError:
-                print()
                 return
 
             print("---")
