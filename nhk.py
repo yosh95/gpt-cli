@@ -3,8 +3,13 @@ import requests
 import unicodedata
 
 from bs4 import BeautifulSoup
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.shortcuts import prompt
+
 
 LIST_SIZE = 10
+
+history = InMemoryHistory()
 
 
 def normalize_unicode(text):
@@ -37,18 +42,25 @@ def get_content(href):
     text = re.sub("\n\n+", "\n\n", text)
     text = re.sub("\n$", "", text)
 
+    global history
+
     print("---")
-    print(text)
+    if len(text) > 0:
+        print(text)
+    else:
+        print("No content.")
+
     try:
-        input("> ")
+        prompt("> ", history=history)
     except EOFError:
-        print()
         return
 
 
 def get():
 
     base_url = "https://www3.nhk.or.jp/news/catnew.html"
+
+    global history
 
     while True:
 
@@ -97,9 +109,8 @@ def get():
 
             print("---")
             try:
-                user_input = input("> ")
+                user_input = prompt("> ", history=history)
             except EOFError:
-                print()
                 return
 
             if normalize_unicode(user_input) == 'q':
