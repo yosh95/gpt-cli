@@ -4,6 +4,7 @@ import argparse
 import filetype
 import os
 import openai
+import pprint
 import re
 import requests
 import unicodedata
@@ -54,6 +55,12 @@ class FixedSizeArray:
 
     def get_size(self):
         return len(self.array)
+
+    def clear(self):
+        self.array.clear()
+
+    def dump(self):
+        pprint.pprint(self.array)
 
 
 # Global conversation
@@ -218,6 +225,13 @@ def process_talk(args):
                 elif user_input.startswith("@3"):
                     user_input = user_input.removeprefix("@3")
                     model = GPT35
+                elif user_input.startswith("@hist"):
+                    if user_input == '@hist' or user_input == '@history':
+                        conversation.dump()
+                        continue
+                elif user_input == '@clear':
+                    conversation.clear()
+                    continue
 
                 if user_input == '':
                     continue
@@ -278,6 +292,11 @@ def process_chunks(text, args):
                     elif user_input.startswith("@3"):
                         user_input = user_input.removeprefix("@3")
                         tmp_model = GPT35
+                    elif '@orig' in user_input:
+                        if user_input == '@orig' or user_input == '@original':
+                            print(chunk)
+                            continue
+                        user_input = re.sub("(@original|@orig)", chunk, user_input)
 
                     if user_input == '':
                         continue
