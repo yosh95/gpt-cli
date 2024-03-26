@@ -7,7 +7,7 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.shortcuts import prompt
 
 
-LIST_SIZE = 10
+KEYS = ['u', 'i', 'o', 'p']
 
 history = InMemoryHistory()
 
@@ -15,6 +15,7 @@ history = InMemoryHistory()
 def normalize_unicode(text):
     ascii_text = unicodedata.normalize('NFKC', text)
     return ascii_text
+
 
 def get_content(href):
 
@@ -51,7 +52,8 @@ def get_content(href):
         print("No content.")
 
     try:
-        prompt("> ", history=history)
+        print("---")
+        prompt("* ")
     except EOFError:
         return
 
@@ -76,7 +78,7 @@ def get():
 
         soup = BeautifulSoup(html_content, "html.parser")
 
-        results = []
+        links = []
 
         for dd in soup.find_all('dd'):
             a_tag = dd.find('a')
@@ -89,21 +91,24 @@ def get():
             href = a_tag['href']
             em_text = em_tag.text
 
-            results.append((em_text, href))
+            links.append((em_text, href))
 
         idx = 0
 
+        print("---")
+
         while True:
 
-            print("---")
-
-            brk = False
-            for i in range(idx, (idx + LIST_SIZE)):
-                if i >= len(results):
-                    brk = True
+            reset = False
+            j = 0
+            for i in range(idx, (idx + len(KEYS))):
+                if i >= len(links):
+                    reset = True
                     break
-                print(f"({i+1}) {results[i][0]}")
-            if brk is True:
+                print(f"({KEYS[j]}) {links[i][0]}")
+                j += 1
+
+            if reset is True:
                 idx = 0
                 continue
 
@@ -113,22 +118,22 @@ def get():
             except EOFError:
                 return
 
-            if normalize_unicode(user_input) in ['q', 'k']:
+            if normalize_unicode(user_input) == 'k':
                 return
             elif user_input == '':
-                idx += LIST_SIZE
+                print("---")
+                idx += len(KEYS)
                 continue
             else:
                 try:
-                    num = int(user_input)
+                    k = KEYS.index(user_input)
                 except ValueError:
-                    print(f"Invalid input:{user_input}")
+                    print(f"Invalid input: {user_input}")
+                    print("---")
                     continue
 
-            if num >= 1 and num <= len(results):
-                get_content(results[num-1][1])
-            else:
-                print(f"Invalid input:{user_input}")
+            get_content(links[idx + k][1])
+            print("---")
 
 
 

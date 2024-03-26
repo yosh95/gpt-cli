@@ -7,8 +7,7 @@ from bs4 import BeautifulSoup
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.shortcuts import prompt
 
-DEFAULT_CATEGORY = "cs"
-LIST_SIZE = 5
+KEYS = ['u', 'i', 'o', 'p']
 
 history = InMemoryHistory()
 
@@ -33,16 +32,18 @@ def get_categories():
 def get_arxiv(category):
 
     skip = 0
-    show = 50
+    show = 20
 
     base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
 
     global history
 
     while True:
+
         response = requests.get(base_url.format(category=category, skip=skip, show=show))
 
         if response.status_code == 200:
+            response.encoding = 'utf-8'
             html_content = response.text
         else:
             print(f"Failed to retrieve the web page: {response.status_code}")
@@ -63,7 +64,7 @@ def get_arxiv(category):
         titles = []
 
         for div in soup.find_all("div", class_="list-title mathjax"):
-            titles.append(div.text.strip().replace("Title: ", ""))
+            titles.append(div.text.strip().replace("Title: ", "").replace("  ", " "))
 
         subjects = []
 
@@ -76,14 +77,16 @@ def get_arxiv(category):
 
         while True:
 
-            brk = False
-            for i in range(idx, (idx + LIST_SIZE)):
+            reset = False
+            j = 0
+            for i in range(idx, (idx + len(KEYS))):
                 if i >= len(arxiv_ids):
-                    brk = True
+                    reset = True
                     break
-                print(f"({i+1}) {titles[i]} ({arxiv_ids[i]}) ({subjects[i]})")
-            if brk is True:
-                skip += len(arxiv_ids)
+                print(f"({KEYS[j]}) {titles[i]} ({arxiv_ids[i]}) ({subjects[i]})")
+                j += 1
+
+            if reset is True:
                 break
 
             print("---")
@@ -92,26 +95,26 @@ def get_arxiv(category):
             except EOFError:
                 return
 
-            print("---")
-
-            if normalize_unicode(user_input) in ['q', 'k']:
+            if normalize_unicode(user_input) == 'k':
                 return
             elif user_input == '':
-                idx += LIST_SIZE
+                print("---")
+                idx += len(KEYS)
                 continue
             else:
                 try:
-                    num = int(user_input)
+                    k = KEYS.index(user_input)
                 except ValueError:
-                    print(f"Invalid input:{user_input}")
+                    print(f"Invalid input: {user_input}")
+                    print("---")
                     continue
 
-            if num >= 1 and num <= show:
-                command = f"gpt https://arxiv.org/pdf/{arxiv_ids[num-1]}.pdf"
-                print(command)
-                os.system(command)
-            else:
-                print(f"Invalid input:{user_input}")
+            command = f"gpt https://arxiv.org/pdf/{arxiv_ids[idx + k]}.pdf"
+            print(command)
+            os.system(command)
+            print("---")
+
+        skip += show
 
 
 if __name__ == "__main__":
