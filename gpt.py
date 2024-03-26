@@ -214,7 +214,7 @@ def process_talk(args):
                                     key_bindings=kb,
                                     multiline=True)
                 user_input = user_input.strip()
-                if normalize_unicode(user_input) == 'q':
+                if normalize_unicode(user_input) in ['q', 'k']:
                     break
 
                 # special commands
@@ -283,7 +283,7 @@ def process_chunks(text, args, start_pos=0):
                         multiline=True)
                 user_input = user_input.strip()
 
-                if normalize_unicode(user_input) == 'q':
+                if normalize_unicode(user_input) in ['q', 'k']:
                     return
                 elif user_input.strip() != '':
 
@@ -350,7 +350,7 @@ def check_chunks(text, args):
                                 history=history)
 
             user_input = user_input.strip()
-            if normalize_unicode(user_input) == 'q':
+            if normalize_unicode(user_input) in ['q', 'k']:
                 return
             elif user_input.startswith("@goto"):
                 pattern = r'^@goto (\d+)'
