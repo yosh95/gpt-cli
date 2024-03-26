@@ -260,8 +260,10 @@ def process_chunks(text, args, start_pos=0):
     history = FileHistory(INPUT_HISTORY)
     conversation = FixedSizeArray(args.depth)
 
-    for i in range(start_pos, text_length, args.chunk_size):
-        chunk = text[i:i+args.chunk_size]
+    idx = start_pos
+    chunk_size = args.chunk_size
+    while True:
+        chunk = text[idx:idx+chunk_size]
         if len(chunk) > 0:
             print("---")
             message = f"{args.prompt}\n\n{chunk}"
@@ -269,7 +271,7 @@ def process_chunks(text, args, start_pos=0):
             conversation.append({"role": "assistant", "content": content})
             print()
 
-        read_count += args.chunk_size
+        read_count += chunk_size
         if read_count >= text_length:
             read_count = text_length
 
@@ -305,21 +307,20 @@ def process_chunks(text, args, start_pos=0):
                         pattern = r'^@goto (\d+)'
                         match = re.search(pattern, user_input)
                         if match:
-                            i = int(match.group(1))
-                            if i < 0:
-                                i = 0
-                            print(f"going to {i}")
-                            read_count = i
+                            idx = int(match.group(1))
+                            if idx < 0:
+                                idx = 0
+                            print(f"going to {idx}")
+                            read_count = idx
                             break
                     elif user_input.startswith("@chunk_size"):
                         pattern = r'^@chunk_size (\d+)'
                         match = re.search(pattern, user_input)
                         if match:
-                            i = int(match.group(1))
-                            if i < 1:
-                                i = 1
-                            print(f"chunk_size has been set to {i}")
-                            args.chunksize = i
+                            chunk_size = int(match.group(1))
+                            if chunk_size < 1:
+                                chunk_size = 1
+                            print(f"chunk_size has been set to {chunk_size}")
                             continue
 
                     if user_input == '':
@@ -332,6 +333,8 @@ def process_chunks(text, args, start_pos=0):
                     print("\n====")
                 else:
                     break
+
+            idx += chunk_size
         except EOFError:
             break
 
