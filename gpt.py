@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from collections import deque
 from dotenv import load_dotenv
 from io import BytesIO
+from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import prompt
@@ -219,6 +220,7 @@ def process_talk(args):
                 if normalize_unicode(user_input) == 'q':
                     break
 
+                # special commands
                 if user_input.startswith("@4"):
                     user_input = user_input.removeprefix("@4")
                     model = GPT4
@@ -245,11 +247,11 @@ def process_talk(args):
                 break
 
 
-def process_chunks(text, args):
+def process_chunks(text, args, start_pos=0):
 
     global conversation
 
-    read_count = args.start_pos - 1
+    read_count = start_pos
     text_length = len(text)
     if text_length == 0:
         print("ERROR: Text is empty.")
@@ -258,7 +260,7 @@ def process_chunks(text, args):
     history = FileHistory(INPUT_HISTORY)
     conversation = FixedSizeArray(args.depth)
 
-    for i in range(args.start_pos - 1, text_length, args.chunk_size):
+    for i in range(start_pos, text_length, args.chunk_size):
         chunk = text[i:i+args.chunk_size]
         if len(chunk) > 0:
             print("---")
@@ -285,6 +287,8 @@ def process_chunks(text, args):
                 if normalize_unicode(user_input) == 'q':
                     return
                 elif user_input.strip() != '':
+
+                    # special commands
                     tmp_model = args.model
                     if user_input.startswith("@4"):
                         user_input = user_input.removeprefix("@4")
@@ -297,6 +301,25 @@ def process_chunks(text, args):
                             print(chunk)
                             continue
                         user_input = re.sub("(@original|@orig)", chunk, user_input)
+                    elif user_input.startswith("@goto"):
+                        pattern = r'^@goto (\d+)'
+                        match = re.search(pattern, user_input)
+                        if match:
+                            i = int(match.group(1))
+                            if i < 0:
+                                i = 0
+                            print(f"going to {i}")
+                            break
+                    elif user_input.startswith("@chunk_size"):
+                        pattern = r'^@chunk_size (\d+)'
+                        match = re.search(pattern, user_input)
+                        if match:
+                            i = int(match.group(1))
+                            if i < 1:
+                                i = 1
+                            print(f"chunk_size has been set to {i}")
+                            args.chunksize = i
+                            break
 
                     if user_input == '':
                         continue
@@ -313,25 +336,46 @@ def process_chunks(text, args):
 
 
 def check_chunks(text, args):
+    history = InMemoryHistory()
+    start_pos = 0
     try:
         while True:
-            user_input = prompt(f"---(--/{len(text)})(0.00%)"
-                                + f"(chunk_size={args.chunk_size}): ")
+            user_input = prompt(f"---({start_pos}/{len(text)})(0.00%)"
+                                + f"(chunk_size={args.chunk_size}): ",
+                                history=history)
+
+            user_input = user_input.strip()
             if normalize_unicode(user_input) == 'q':
                 return
-            elif user_input != '':
-                try:
-                    num = int(user_input)
-                    args.chunk_size = num
-                    break
-                except ValueError:
-                    print(f"Invalid number:{user_input}")
-            else:
+            elif user_input.startswith("@goto"):
+                pattern = r'^@goto (\d+)'
+                match = re.search(pattern, user_input)
+                if match:
+                    i = int(match.group(1))
+                    if i < 0:
+                        i = 0
+                    print(f"going to {i}")
+                    start_pos = i
+                    continue
+            elif user_input.startswith("@chunk_size"):
+                pattern = r'^@chunk_size (\d+)'
+                match = re.search(pattern, user_input)
+                if match:
+                    i = int(match.group(1))
+                    if i < 1:
+                        i = 1
+                    print(f"chunk_size has been set to {i}")
+                    args.chunk_size = i
+                    continue
+            if user_input == '':
                 break
+            elif user_input != '':
+                print(f"Invalid input: {user_input}")
+
     except EOFError:
         return
 
-    process_chunks(text, args)
+    process_chunks(text, args, start_pos)
 
 
 def process_pdf(file_name, args):
@@ -410,12 +454,6 @@ if __name__ == "__main__":
                         help="Specify PDF pages to read. Use a "
                              + "comma-separated list and ranges. "
                              + "Example: \"1,3,4-7,11\".")
-    parser.add_argument('-s',
-                        '--start_pos',
-                        type=int,
-                        help="The starting position (in characters) "
-                             + "for reading. Default = 1",
-                        default=1)
     args = parser.parse_args()
 
     if args.model == '3':
