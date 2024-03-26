@@ -309,6 +309,7 @@ def process_chunks(text, args, start_pos=0):
                             if i < 0:
                                 i = 0
                             print(f"going to {i}")
+                            read_count = i
                             break
                     elif user_input.startswith("@chunk_size"):
                         pattern = r'^@chunk_size (\d+)'
@@ -319,7 +320,7 @@ def process_chunks(text, args, start_pos=0):
                                 i = 1
                             print(f"chunk_size has been set to {i}")
                             args.chunksize = i
-                            break
+                            continue
 
                     if user_input == '':
                         continue
@@ -340,7 +341,8 @@ def check_chunks(text, args):
     start_pos = 0
     try:
         while True:
-            user_input = prompt(f"---({start_pos}/{len(text)})(0.00%)"
+            consumed = start_pos / len(text) * 100
+            user_input = prompt(f"---({start_pos}/{len(text)})({consumed:.2f}%)"
                                 + f"(chunk_size={args.chunk_size}): ",
                                 history=history)
 
