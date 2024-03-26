@@ -25,7 +25,6 @@ load_dotenv()
 # OpenAI
 openai_client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
-
 # Constants
 DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_PROMPT = os.getenv(
@@ -94,7 +93,7 @@ def _send(message, conversation, model, quiet=False):
 
     messages = []
 
-    if conversation:
+    if conversation is not None:
         messages.extend(conversation.get_array())
 
     if SYSTEM_PROMPT is not None:
@@ -197,18 +196,16 @@ def fetch_url_content(url, pages=None):
 
 
 # Processing Functions
-def process_talk(args):
+def process_talk(source, model, depth):
 
     global conversation
 
-    model = args.model
-
-    if args.source is not None:
-        _send(args.source, conversation=None, model=model)
+    if source is not None:
+        _send(source, conversation=None, model=model)
         print()
     else:
         history = FileHistory(INPUT_HISTORY)
-        conversation = FixedSizeArray(args.depth)
+        conversation = FixedSizeArray(depth)
         while True:
             try:
                 user_input = prompt("(You): ",
@@ -216,7 +213,7 @@ def process_talk(args):
                                     key_bindings=kb,
                                     multiline=True)
                 user_input = user_input.strip()
-                if normalize_unicode(user_input) in ['q', 'k']:
+                if normalize_unicode(user_input) == 'k':
                     break
 
                 # special commands
@@ -246,7 +243,7 @@ def process_talk(args):
                 break
 
 
-def process_chunks(text, args, start_pos=0):
+def process_chunks(text, prmt, model, chunk_size, depth, start_pos):
 
     global conversation
 
@@ -257,16 +254,15 @@ def process_chunks(text, args, start_pos=0):
         return
 
     history = FileHistory(INPUT_HISTORY)
-    conversation = FixedSizeArray(args.depth)
+    conversation = FixedSizeArray(depth)
 
     idx = start_pos
-    chunk_size = args.chunk_size
     while True:
         chunk = text[idx:idx+chunk_size]
         if len(chunk) > 0:
             print("---")
-            message = f"{args.prompt}\n\n{chunk}"
-            content = _send(message, None, args.model)
+            message = f"{prmt}\n\n{chunk}"
+            content = _send(message, None, model)
             conversation.append({"role": "assistant", "content": content})
             print()
 
@@ -285,25 +281,23 @@ def process_chunks(text, args, start_pos=0):
                         multiline=True)
                 user_input = user_input.strip()
 
-                if normalize_unicode(user_input) in ['q', 'k']:
+                if normalize_unicode(user_input) == 'k':
                     return
                 elif user_input.strip() != '':
 
                     # special commands
-                    tmp_model = args.model
+                    tmp_model = model
                     if user_input.startswith("@4"):
                         user_input = user_input.removeprefix("@4")
                         tmp_model = GPT4
                     elif user_input.startswith("@3"):
                         user_input = user_input.removeprefix("@3")
                         tmp_model = GPT35
-                    elif '@orig' in user_input:
-                        if user_input == '@orig' or user_input == '@original':
+                    elif '@raw' in user_input:
+                        if user_input == '@raw':
                             print(chunk)
                             continue
-                        user_input = re.sub("(@original|@orig)",
-                                            chunk,
-                                            user_input)
+                        user_input = re.sub("@raw", chunk, user_input)
                     elif user_input.startswith("@goto"):
                         pattern = r'^@goto (\d+)'
                         match = re.search(pattern, user_input)
@@ -340,7 +334,7 @@ def process_chunks(text, args, start_pos=0):
             break
 
 
-def check_chunks(text, args):
+def check_chunks(text, prmt, model, chunk_size, depth):
     history = FileHistory(INPUT_HISTORY)
     start_pos = 0
     try:
@@ -348,11 +342,11 @@ def check_chunks(text, args):
             consumed = start_pos / len(text) * 100
             user_input = prompt(f"---({start_pos}/{len(text)})"
                                 + f"({consumed:.2f}%)"
-                                + f"(chunk_size={args.chunk_size}): ",
+                                + f"(chunk_size={chunk_size}): ",
                                 history=history)
 
             user_input = user_input.strip()
-            if normalize_unicode(user_input) in ['q', 'k']:
+            if normalize_unicode(user_input) == 'k':
                 return
             elif user_input.startswith("@goto"):
                 pattern = r'^@goto (\d+)'
@@ -372,7 +366,7 @@ def check_chunks(text, args):
                     if i < 1:
                         i = 1
                     print(f"chunk_size has been set to {i}")
-                    args.chunk_size = i
+                    chunk_size = i
                     continue
             if user_input == '':
                 break
@@ -382,41 +376,41 @@ def check_chunks(text, args):
     except EOFError:
         return
 
-    process_chunks(text, args, start_pos)
+    process_chunks(text, prmt, model, chunk_size, depth, start_pos)
 
 
-def process_pdf(file_name, args):
+def process_pdf(file_name, prmt, model, chunk_size, depth):
     with open(file_name, "rb") as fh:
-        text = read_pdf(BytesIO(fh.read()), args.pages)
+        text = read_pdf(BytesIO(fh.read()), pages)
 
     if text != '':
-        check_chunks(text, args)
+        check_chunks(text, prmt, model, chunk_size, depth)
     else:
         print("No matched pages.")
 
 
-def process_text(file_name, args):
+def process_text(file_name, prmt, model, chunk_size, depth):
     with open(file_name, 'r', encoding='utf-8') as file:
         text = file.read()
         if text != '':
-            check_chunks(text, args)
+            check_chunks(text, prmt, model, chunk_size, depth)
 
 
-def read_and_process(args):
-    if args.source.startswith("http"):
-        text = fetch_url_content(args.source, args.pages)
+def read_and_process(source, prmt, model, chunk_size, depth, pages):
+    if source.startswith("http"):
+        text = fetch_url_content(source, pages)
         if text != '':
-            check_chunks(text, args)
+            check_chunks(text, prmt, model, chunk_size, depth)
             return
 
-    if os.path.exists(args.source):
-        kind = filetype.guess(args.source)
+    if os.path.exists(source):
+        kind = filetype.guess(source)
         if kind and kind.extension == 'pdf':
-            process_pdf(args.source, args)
+            process_pdf(source, prmt, model, chunk_size, depth)
         else:
-            process_text(args.source, args)
+            process_text(source, prmt, model, chunk_size, depth)
     else:
-        process_talk(args)
+        process_talk(source, model, depth)
 
 
 # CLI Interface
@@ -468,8 +462,13 @@ if __name__ == "__main__":
         args.model = GPT4
 
     if args.source is None:
-        process_talk(args)
+        process_talk(args.source, args.model, args.depth)
     else:
         if args.prompt is None:
             args.prompt = DEFAULT_PROMPT
-        read_and_process(args)
+        read_and_process(args.source,
+                         args.prompt,
+                         args.model,
+                         args.chunk_size,
+                         args.depth,
+                         args.pages)
