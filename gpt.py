@@ -88,7 +88,7 @@ def insert_custom_text(event):
 
 
 # Helper Functions
-def _send(message, conversation, model):
+def _send(message, conversation, model, quiet=False):
 
     message = message.strip()
 
@@ -113,7 +113,9 @@ def _send(message, conversation, model):
             timeout=DEFAULT_TIMEOUT_SEC
         )
 
-        print(f"({model}):\n")
+        if quiet is False:
+            print(f"({model}):\n")
+
         for chunk in response:
             chunk_message = chunk.choices[0].delta.content
             if chunk_message:
