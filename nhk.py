@@ -113,7 +113,7 @@ def get():
             except EOFError:
                 return
 
-            if normalize_unicode(user_input) == 'q':
+            if normalize_unicode(user_input) in ['q', 'k']:
                 return
             elif user_input == '':
                 idx += LIST_SIZE
