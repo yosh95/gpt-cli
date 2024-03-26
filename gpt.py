@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 from collections import deque
 from dotenv import load_dotenv
 from io import BytesIO
-from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.shortcuts import prompt
@@ -83,7 +82,7 @@ def _(event):
 
 @kb.add('c-y')
 def insert_custom_text(event):
-    if conversation != None and conversation.get_size() > 0:
+    if conversation is not None and conversation.get_size() > 0:
         text = conversation.get_last()['content']
         event.app.current_buffer.insert_text(text)
 
@@ -186,8 +185,6 @@ def fetch_url_content(url, pages=None):
 
     content = response.content
 
-    attr = "wb"
-
     if 'application/pdf' in content_type:
         return read_pdf(BytesIO(content), pages)
     elif 'text/html' in content_type:
@@ -285,7 +282,7 @@ def process_chunks(text, args, start_pos=0):
                         key_bindings=kb,
                         multiline=True)
                 user_input = user_input.strip()
-                
+
                 if normalize_unicode(user_input) == 'q':
                     return
                 elif user_input.strip() != '':
@@ -302,7 +299,9 @@ def process_chunks(text, args, start_pos=0):
                         if user_input == '@orig' or user_input == '@original':
                             print(chunk)
                             continue
-                        user_input = re.sub("(@original|@orig)", chunk, user_input)
+                        user_input = re.sub("(@original|@orig)",
+                                            chunk,
+                                            user_input)
                     elif user_input.startswith("@goto"):
                         pattern = r'^@goto (\d+)'
                         match = re.search(pattern, user_input)
@@ -326,7 +325,7 @@ def process_chunks(text, args, start_pos=0):
                     if user_input == '':
                         continue
 
-                    print(f"== Side conversation ==")
+                    print("== Side conversation ==")
                     _send(user_input,
                           conversation=conversation,
                           model=tmp_model)
@@ -340,12 +339,13 @@ def process_chunks(text, args, start_pos=0):
 
 
 def check_chunks(text, args):
-    history = InMemoryHistory()
+    history = FileHistory(INPUT_HISTORY)
     start_pos = 0
     try:
         while True:
             consumed = start_pos / len(text) * 100
-            user_input = prompt(f"---({start_pos}/{len(text)})({consumed:.2f}%)"
+            user_input = prompt(f"---({start_pos}/{len(text)})"
+                                + f"({consumed:.2f}%)"
                                 + f"(chunk_size={args.chunk_size}): ",
                                 history=history)
 
@@ -415,7 +415,6 @@ def read_and_process(args):
             process_text(args.source, args)
     else:
         process_talk(args)
-
 
 
 # CLI Interface
