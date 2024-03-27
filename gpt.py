@@ -316,8 +316,8 @@ def process_chunks(text, prmt, model, chunk_size, depth, start_pos):
                             print(f"going to {idx}")
                             read_count = idx
                             break
-                    elif user_input.startswith("@chunk_size"):
-                        pattern = r'^@chunk_size (\d+)'
+                    elif user_input.startswith("@chunk"):
+                        pattern = r'^@chunk (\d+)'
                         match = re.search(pattern, user_input)
                         if match:
                             chunk_size = int(match.group(1))
@@ -366,8 +366,8 @@ def check_chunks(text, prmt, model, chunk_size, depth):
                     print(f"going to {i}")
                     start_pos = i
                     continue
-            elif user_input.startswith("@chunk_size"):
-                pattern = r'^@chunk_size (\d+)'
+            elif user_input.startswith("@chunk"):
+                pattern = r'^@chunk (\d+)'
                 match = re.search(pattern, user_input)
                 if match:
                     i = int(match.group(1))
