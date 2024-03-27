@@ -30,7 +30,7 @@ DEFAULT_CHUNK_SIZE = 3000
 DEFAULT_PROMPT = os.getenv(
         "GPT_DEFAULT_PROMPT",
         "Please summarize the following sentences:")
-DEFAULT_TALK_QUEUE_SIZE = 6
+DEFAULT_TALK_QUEUE_SIZE = 8
 DEFAULT_TIMEOUT_SEC = 30
 GPT4, GPT35 = "gpt-4-turbo-preview", "gpt-3.5-turbo"
 INPUT_HISTORY = os.path.expanduser("~") + "/.gpt_prompt_history"
@@ -49,8 +49,8 @@ class FixedSizeArray:
     def get_array(self):
         return list(self.array)
 
-    def get_last(self):
-        return self.array[-1]
+    def get(self, index):
+        return self.array[index]
 
     def get_size(self):
         return len(self.array)
@@ -79,10 +79,17 @@ def _(event):
     event.current_buffer.validate_and_handle()
 
 
-@kb.add('c-y')
-def insert_custom_text(event):
+@kb.add('c-u')
+def insert_user_message(event):
+    if conversation is not None and conversation.get_size() > 1:
+        text = conversation.get(-2)['content']
+        event.app.current_buffer.insert_text(text)
+
+
+@kb.add('c-i')
+def insert_gpt_message(event):
     if conversation is not None and conversation.get_size() > 0:
-        text = conversation.get_last()['content']
+        text = conversation.get(-1)['content']
         event.app.current_buffer.insert_text(text)
 
 
@@ -263,6 +270,7 @@ def process_chunks(text, prmt, model, chunk_size, depth, start_pos):
             print("---")
             message = f"{prmt}\n\n{chunk}"
             content = _send(message, None, model)
+            conversation.append({"role": "user", "content": message})
             conversation.append({"role": "assistant", "content": content})
             print()
 
