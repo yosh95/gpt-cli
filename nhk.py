@@ -50,6 +50,7 @@ def get_content(href):
         print(text)
     else:
         print("No content.")
+        return
 
     try:
         print("---")
