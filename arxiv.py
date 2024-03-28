@@ -29,9 +29,9 @@ def get_categories():
         print(tag.text)
 
 
-def get_arxiv(category):
+def get_arxiv(category, skip=0):
 
-    skip = 0
+    skip = skip
     show = 20
 
     base_url = "https://arxiv.org/list/{category}/recent?skip={skip}&show={show}"
@@ -125,10 +125,14 @@ if __name__ == "__main__":
                         nargs='?',
                         help="Specify the category.")
 
+    parser.add_argument('-s',
+                        '--skip',
+                        type=int,
+                        help="Specify skip count.")
+
     args = parser.parse_args()
 
     if args.category is None:
         get_categories()
     else:
-        get_arxiv(args.category)
-
+        get_arxiv(args.category, args.skip)
